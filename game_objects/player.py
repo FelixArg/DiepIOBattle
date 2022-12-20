@@ -8,6 +8,7 @@ class Player:
         self.uid = uid
         self.tank = Tank()
         self.upgrage_count = 0
+        self.memory_string = ''
 
         #
         if uid == 0:
@@ -31,7 +32,7 @@ class Player:
         if bullet is not None:
             self.bullets.append(bullet)
 
-    def upgrage(self, type: UpgradeType, game_tick):
+    def upgrade(self, type: UpgradeType, game_tick):
         if self.upgrage_count >= self.score // SCORE_NEED_FOR_UPDATE:
             return
         self.upgrage_count += 1

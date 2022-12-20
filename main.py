@@ -147,7 +147,7 @@ def process_game_logic():
 
         player.move(points[player.uid], tick)
         player.shoot(tick)
-        player.upgrage(UpgradeType.BULLET_SPEED, tick)
+        player.upgrade(UpgradeType.BULLET_SPEED, tick)
 
     for player in players:
         for bullet in player.bullets:
@@ -242,6 +242,105 @@ def add_new_bonus_marks(count):
                 break
         if can_place:
             bonus_marks.append(bonus_mark)
+
+
+def collect_input_for_player(player, last_mem_string):
+    if player.tank is None:
+        return 'Defeat'
+
+    info_string = ''
+    info_string += str(player.uid) + '\n'
+    info_string += str(player.score) + '\n'
+    info_string += str(player.tank.center_x) + ' ' + str(player.tank.center_y) + ' ' + str(player.tank.radius) + '\n'
+    info_string += str(player.tank.health) + ' ' + str(player.tank.max_health) + '\n'
+    info_string += str(player.tank.speed) + '\n'
+    info_string += str(player.tank.bullet_speed_add + BULLET_DEFAULT_SPEED) + ' ' + \
+                   str(player.tank.damage_add + BULLET_DEFAULT_DAMAGE) + '\n'
+
+    info_string += str(len(player.bullets)) + '\n'
+    for bullet in player.bullets:
+        info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
+
+    other_player_count = 0
+    for player_cur in players:
+        if player_cur.tank is None or player_cur.uid == player.uid:
+            continue
+        other_player_count += 1
+
+    info_string += str(other_player_count) + '\n'
+    for player_cur in players:
+        if player_cur.tank is None or player_cur.uid == player.uid:
+            continue
+        info_string += str(player_cur.uid) + '\n'
+        info_string += str(player_cur.score) + '\n'
+        info_string += str(player_cur.tank.center_x) + ' ' + str(player_cur.tank.center_y) + ' ' + \
+                       str(player_cur.tank.radius) + '\n'
+        info_string += str(len(player_cur.bullets)) + '\n'
+        for bullet in player_cur.bullets:
+            info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
+
+    info_string += str(len(bonus_marks)) + '\n'
+    for bonus_mark in bonus_marks:
+        info_string += str(bonus_mark.center_x) + ' ' + str(bonus_mark.center_y) + ' ' + str(bonus_mark.radius) + '\n'
+
+    info_string += last_mem_string
+    return info_string
+
+
+def parse_player_output(player_uid, player_output):
+    global players
+
+    player_moved = False
+    player_shoot = False
+    player_turn = False
+    player_memory_string = False
+    player_upgrade_count = 0
+
+    for line in player_output.split('\n'):
+        try:
+            l = line.split()
+            if l[0] == 'move' and not player_moved:
+                player_moved = True
+                x = float(l[1])
+                y = float(l[2])
+                players[player_uid].move((x, y), tick)
+            elif l[0] == 'shoot' and not player_shoot:
+                player_shoot = True
+                players[player_uid].shoot(tick)
+            elif l[0] == 'turn' and not player_turn:
+                player_turn = True
+                angle = float(l[1])
+                if angle > 2 * math.pi:
+                    raise Exception
+                if angle < -2 * math.pi:
+                    raise Exception
+                players[player_uid].turn(angle)
+            elif l[0] == 'upgrade' and player_upgrade_count < MAX_UPGRADE_COUNT_PER_TICK:
+                player_upgrade_count += 1
+                type = l[1]
+                valid_types = ['max_health', 'speed', 'damage', 'health_regeneration', 'bullet_speed']
+                if type not in valid_types:
+                    raise Exception
+                if type == 'max_health':
+                    type = UpgradeType.MAX_HEALTH
+                elif type == 'speed':
+                    type = UpgradeType.SPEED
+                elif type == 'damage':
+                    type = UpgradeType.DAMAGE
+                elif type == 'health_regeneration':
+                    type = UpgradeType.HEALTH_REGENERATION
+                elif type == 'bullet_speed':
+                    type = UpgradeType.BULLET_SPEED
+                players[player_uid].upgrade(type, tick)
+            elif l[0] == 'memory' and not player_memory_string:
+                player_memory_string = True
+                players[player_uid].memory_string = line[7::]
+                if len(players[player_uid].memory_string) > 256:
+                    players[player_uid].memory_string = players[player_uid].memory_string[:256:]
+            else:
+                raise Exception
+        except:
+            continue
 
 
 if __name__ == '__main__':
