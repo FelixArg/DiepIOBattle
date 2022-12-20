@@ -15,12 +15,14 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
-YELLOW = (255, 255, 0)
+VIOLET = (255, 0, 255)
+GRAY = (200, 200, 200)
 #
 
 # game globals
 tick = 0
 clock = pygame.time.Clock()
+font = None
 
 points = [[1000, 700], [1000, 700]]
 
@@ -46,6 +48,9 @@ def main():
 
 def init_game():
     global bonus_marks
+    global font
+
+    font = pygame.font.SysFont('Courier new', 20)
 
     players.append(Player(0))
     players.append(Player(1))
@@ -71,13 +76,17 @@ def process_game_tick(screen):
 def draw_all(screen):
     global players
     global bonus_marks
+    global font
 
     screen.fill(WHITE)
-    pygame.draw.rect(screen, BLACK, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
+    pygame.draw.rect(screen, GRAY, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
+    pygame.draw.rect(screen, BLACK, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT), 3)
 
+
+    # Game objects
     for player in players:
         for bullet in player.bullets:
-            pygame.draw.circle(screen, BLUE, (bullet.center_x, bullet.center_y), bullet.radius)
+            pygame.draw.circle(screen, VIOLET, (bullet.center_x, bullet.center_y), bullet.radius)
 
     for bonus_mark in bonus_marks:
         pygame.draw.circle(screen, GREEN, (bonus_mark.center_x, bonus_mark.center_y), bonus_mark.radius)
@@ -85,8 +94,15 @@ def draw_all(screen):
     for player in players:
         if player.tank is None:
             continue
-        pygame.draw.circle(screen, (RED if player.uid == 0 else YELLOW),
+        pygame.draw.circle(screen, (RED if player.uid == 0 else BLUE),
                            (player.tank.center_x, player.tank.center_y), player.tank.radius)
+    #
+
+    player_1_score_img = font.render('Player 1 score: ' + str(players[0].score), True, RED)
+    screen.blit(player_1_score_img, (15, WORLD_HEIGHT + 15))
+
+    player_2_score_img = font.render('Player 2 score: ' + str(players[1].score), True, BLUE)
+    screen.blit(player_2_score_img, (WORLD_WIDTH - 15 - player_2_score_img.get_width(), WORLD_HEIGHT + 15))
 
     pygame.display.update()
 
