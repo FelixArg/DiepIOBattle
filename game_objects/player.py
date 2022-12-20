@@ -1,4 +1,5 @@
 from game_objects.tank import *
+from constants import SCORE_NEED_FOR_UPDATE
 
 
 class Player:
@@ -6,6 +7,7 @@ class Player:
         self.score = 0
         self.uid = uid
         self.tank = Tank()
+        self.upgrage_count = 0
 
         #
         if uid == 0:
@@ -28,3 +30,9 @@ class Player:
         bullet = self.tank.shoot(game_tick)
         if bullet is not None:
             self.bullets.append(bullet)
+
+    def upgrage(self, type: UpgradeType, game_tick):
+        if self.upgrage_count >= self.score // SCORE_NEED_FOR_UPDATE:
+            return
+        self.upgrage_count += 1
+        self.tank.upgrade(type)

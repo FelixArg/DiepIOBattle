@@ -7,6 +7,7 @@ import random
 import internal_math
 from game_objects.player import Player
 from game_objects.bonus_mark import BonusMark
+from game_objects.upgrade import UpgradeType
 from constants import *
 
 # colors
@@ -146,6 +147,7 @@ def process_game_logic():
 
         player.move(points[player.uid], tick)
         player.shoot(tick)
+        player.upgrage(UpgradeType.BULLET_SPEED, tick)
 
     for player in players:
         for bullet in player.bullets:
