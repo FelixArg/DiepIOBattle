@@ -2,13 +2,18 @@ from game_objects.tank import *
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, uid: int):
         self.score = 0
+        self.uid = uid
         self.tank = Tank()
 
         #
-        self.tank.center_x = 100
-        self.tank.center_y = 100
+        if uid == 0:
+            self.tank.center_x = 100
+            self.tank.center_y = 100
+        else:
+            self.tank.center_x = 1000
+            self.tank.center_y = 100
         #
 
         self.bullets = []

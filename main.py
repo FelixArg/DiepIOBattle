@@ -15,14 +15,16 @@ WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+YELLOW = (255, 255, 0)
 #
 
 # game globals
 tick = 0
 clock = pygame.time.Clock()
 
-point = [1000, 700]
-player = Player()
+points = [[1000, 700], [1000, 700]]
+
+players = []
 bonus_marks = []
 #
 
@@ -45,6 +47,9 @@ def main():
 def init_game():
     global bonus_marks
 
+    players.append(Player(0))
+    players.append(Player(1))
+
     random.seed(0)
     for i in range(20):
         bonus_mark = BonusMark()
@@ -64,82 +69,124 @@ def process_game_tick(screen):
 
 
 def draw_all(screen):
-    global player
+    global players
     global bonus_marks
 
     screen.fill(WHITE)
     pygame.draw.rect(screen, BLACK, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
 
-    pygame.draw.circle(screen, RED, (player.tank.center_x, player.tank.center_y), player.tank.radius)
+    for player in players:
+        for bullet in player.bullets:
+            pygame.draw.circle(screen, BLUE, (bullet.center_x, bullet.center_y), bullet.radius)
 
     for bonus_mark in bonus_marks:
         pygame.draw.circle(screen, GREEN, (bonus_mark.center_x, bonus_mark.center_y), bonus_mark.radius)
 
-    for bullet in player.bullets:
-        pygame.draw.circle(screen, BLUE, (bullet.center_x, bullet.center_y), bullet.radius)
+    for player in players:
+        if player.tank is None:
+            continue
+        pygame.draw.circle(screen, (RED if player.uid == 0 else YELLOW),
+                           (player.tank.center_x, player.tank.center_y), player.tank.radius)
 
     pygame.display.update()
 
 
 def process_game_logic():
-    global point
-    global player
+    global points
+    global players
     global tick
 
-    if math.fabs(point[0] - player.tank.center_x) < internal_math.EPS and \
-            math.fabs(point[1] - player.tank.center_y) < internal_math.EPS:
-        point = [random.random() * WORLD_WIDTH, random.random() * WORLD_HEIGHT]
+    for player in players:
+        if player.tank is None:
+            continue
+        if math.fabs(points[player.uid][0] - player.tank.center_x) < internal_math.EPS and \
+                math.fabs(points[player.uid][1] - player.tank.center_y) < internal_math.EPS:
+            points[player.uid] = [random.random() * WORLD_WIDTH, random.random() * WORLD_HEIGHT]
 
-    angle_cur = random.random() * math.pi * 2
-    if math.fabs(angle_cur - player.tank.angle) > internal_math.EPS:
-        angle = angle_cur - player.tank.angle
-        player.turn(angle, tick)
+        if players[player.uid ^ 1].tank is not None and player.uid == 1:
+            vec = (players[player.uid ^ 1].tank.center_x - player.tank.center_x,
+                   players[player.uid ^ 1].tank.center_y - player.tank.center_y)
+            angle_cur = math.atan2(vec[1], vec[0])
+        else:
+            if len(bonus_marks) > 0:
+                vec = (bonus_marks[0].center_x - player.tank.center_x,
+                       bonus_marks[0].center_y - player.tank.center_y)
+            else:
+                vec = (-player.tank.center_x, -player.tank.center_y)
+            angle_cur = math.atan2(vec[1], vec[0])
 
-    player.move(point, tick)
-    player.shoot(tick)
+        if angle_cur < 0:
+            angle_cur += 2 * math.pi
+        if math.fabs(angle_cur - player.tank.angle) > internal_math.EPS:
+            angle = angle_cur - player.tank.angle
+            player.turn(angle, tick)
 
-    for bullet in player.bullets:
-        bullet.move()
+        player.move(points[player.uid], tick)
+        player.shoot(tick)
 
 
 def process_collision():
-    global player
+    global players
     global bonus_marks
 
-    new_bonus_marks = []
-    new_bullets = []
+    for player in players:
+        for bullet in player.bullets:
+            bullet.move()
 
-    for bullet in player.bullets:
-        if bullet.invalidate:
-            continue
-        for bonus_mark in bonus_marks:
-            if bonus_mark.invalidate:
+    for player in players:
+        for bullet in player.bullets:
+            if bullet.invalidate:
                 continue
-            if internal_math.circle_intersection_square(bullet, bonus_mark) > internal_math.EPS:
-                bonus_mark.health -= bullet.damage
+            for bonus_mark in bonus_marks:
+                if bonus_mark.invalidate:
+                    continue
+                if internal_math.circle_intersection_square(bullet, bonus_mark) > internal_math.EPS:
+                    bonus_mark.health -= bullet.damage
+                    bullet.invalidate = True
+                    if bonus_mark.health <= 0:
+                        player.score += bonus_mark.gives_score
+                        bonus_mark.invalidate = True
+            for player_other in players:
+                if player.uid == player_other.uid:
+                    continue
+                for bullet_other in player_other.bullets:
+                    if bullet_other.invalidate:
+                        continue
+                    if internal_math.circle_intersection_square(bullet, bullet_other) > internal_math.EPS:
+                        bullet.invalidate = True
+                        bullet_other.invalidate = True
+                if player_other.tank is not None and \
+                        internal_math.circle_intersection_square(bullet, player_other.tank) > internal_math.EPS:
+                    bullet.invalidate = True
+                    player_other.tank.health -= bullet.damage
+                    if player_other.tank.health <= 0:
+                        player_other.tank.invalidate = True
+
+    for player in players:
+        for bullet in player.bullets:
+            if bullet.invalidate:
+                continue
+            if bullet.center_x < 0 or bullet.center_x >= WORLD_WIDTH \
+                    or bullet.center_y < 0 or bullet.center_y >= WORLD_HEIGHT:
                 bullet.invalidate = True
-                if bonus_mark.health <= 0:
-                    player.score += bonus_mark.gives_score
-                    bonus_mark.invalidate = True
 
-    for bullet in player.bullets:
-        if bullet.invalidate:
+    for player in players:
+        new_bullets = []
+        for bullet in player.bullets:
+            if bullet.invalidate:
+                continue
+            new_bullets.append(bullet)
+        player.bullets = new_bullets
+        if player.tank is None:
             continue
-        if bullet.center_x < 0 or bullet.center_x >= WORLD_WIDTH \
-                or bullet.center_y < 0 or bullet.center_y >= WORLD_HEIGHT:
-            bullet.invalidate = True
+        if player.tank.invalidate:
+            player.tank = None
 
-    for bullet in player.bullets:
-        if bullet.invalidate:
-            continue
-        new_bullets.append(bullet)
-
+    new_bonus_marks = []
     for bonus_mark in bonus_marks:
         if bonus_mark.invalidate:
             continue
         new_bonus_marks.append(bonus_mark)
-
-    player.bullets = new_bullets
     bonus_marks = new_bonus_marks
 
 
