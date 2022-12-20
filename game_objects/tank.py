@@ -2,7 +2,7 @@ from internal_math import *
 from game_objects.bullet import Bullet
 from constants import WORLD_WIDTH, WORLD_HEIGHT, FPS, ANGLE_SPEED,\
     TANK_DEFAULT_SPEED, TANK_DEFAULT_RADIUS, TANK_DEFAULT_WEIGHT, TANK_DEFAULT_ANGLE, \
-    TANK_DEFAULT_HEALTH, TANK_DEFAULT_HEALTH_REGENERATION, TANK_DEFAULT_COOLDOWN
+    TANK_DEFAULT_HEALTH, TANK_DEFAULT_HEALTH_REGENERATION, TANK_DEFAULT_COOLDOWN, TANK_DEFAULT_DAMAGE_ADD
 
 
 class Tank(CircleBody):
@@ -12,9 +12,11 @@ class Tank(CircleBody):
         self.angle = TANK_DEFAULT_ANGLE
         self.speed = TANK_DEFAULT_SPEED
         self.health = TANK_DEFAULT_HEALTH
+        self.max_health = TANK_DEFAULT_HEALTH
         self.health_regeneration = TANK_DEFAULT_HEALTH_REGENERATION
         self.cooldown = TANK_DEFAULT_COOLDOWN
         self.weight = TANK_DEFAULT_WEIGHT
+        self.damage_add = TANK_DEFAULT_DAMAGE_ADD
         self.last_time_shoot = None
 
     def move(self, to_point):
@@ -44,6 +46,7 @@ class Tank(CircleBody):
         bullet.center_x = self.center_x
         bullet.center_y = self.center_y
         bullet.angle = self.angle
+        bullet.damage += self.damage_add
 
         self.last_time_shoot = current_game_tick
 
@@ -61,3 +64,8 @@ class Tank(CircleBody):
             self.angle -= 2 * math.pi
         while self.angle < 0:
             self.angle += 2 * math.pi
+
+    def regenerate(self):
+        self.health += 1 / FPS * self.health_regeneration
+        if self.health > self.max_health:
+            self.health = self.max_health

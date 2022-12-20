@@ -56,11 +56,7 @@ def init_game():
     players.append(Player(1))
 
     random.seed(0)
-    for i in range(20):
-        bonus_mark = BonusMark()
-        bonus_mark.center_x = random.random() * WORLD_WIDTH
-        bonus_mark.center_y = random.random() * WORLD_HEIGHT
-        bonus_marks.append(bonus_mark)
+    add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT)
 
 
 def process_game_tick(screen):
@@ -70,6 +66,7 @@ def process_game_tick(screen):
             sys.exit()
     process_game_logic()
     process_collision()
+    process_post_game_logic()
     draw_all(screen)
 
 
@@ -79,9 +76,6 @@ def draw_all(screen):
     global font
 
     screen.fill(WHITE)
-    pygame.draw.rect(screen, GRAY, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
-    pygame.draw.rect(screen, BLACK, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT), 3)
-
 
     # Game objects
     for player in players:
@@ -98,10 +92,23 @@ def draw_all(screen):
                            (player.tank.center_x, player.tank.center_y), player.tank.radius)
     #
 
-    player_1_score_img = font.render('Player 1 score: ' + str(players[0].score), True, RED)
+    pygame.draw.rect(screen, GRAY, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
+    pygame.draw.rect(screen, BLACK, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT), 3)
+
+    player_1_info_str = 'Player 1 [' + 'Score: ' + str(players[0].score) + ' ' + 'Health: ' + \
+                        str(0 if players[0].tank is None else math.trunc(players[0].tank.health)) + ' ' + 'Speed: ' \
+                        + str(0 if players[0].tank is None else players[0].tank.speed) + ' ' + 'Damage: ' \
+                        + str(0 if players[0].tank is None else players[0].tank.damage_add + BULLET_DEFAULT_DAMAGE) \
+                        + ']'
+    player_1_score_img = font.render(player_1_info_str, True, RED)
     screen.blit(player_1_score_img, (15, WORLD_HEIGHT + 15))
 
-    player_2_score_img = font.render('Player 2 score: ' + str(players[1].score), True, BLUE)
+    player_2_info_str = 'Player 2 [' + 'Score: ' + str(players[1].score) + ' ' + 'Health: ' + \
+                        str(0 if players[1].tank is None else math.trunc(players[1].tank.health)) + ' ' + 'Speed: ' \
+                        + str(0 if players[1].tank is None else players[1].tank.speed) + ' ' + 'Damage: ' \
+                        + str(0 if players[1].tank is None else players[1].tank.damage_add + BULLET_DEFAULT_DAMAGE) \
+                        + ']'
+    player_2_score_img = font.render(player_2_info_str, True, BLUE)
     screen.blit(player_2_score_img, (WORLD_WIDTH - 15 - player_2_score_img.get_width(), WORLD_HEIGHT + 15))
 
     pygame.display.update()
@@ -140,14 +147,14 @@ def process_game_logic():
         player.move(points[player.uid], tick)
         player.shoot(tick)
 
+    for player in players:
+        for bullet in player.bullets:
+            bullet.move()
+
 
 def process_collision():
     global players
     global bonus_marks
-
-    for player in players:
-        for bullet in player.bullets:
-            bullet.move()
 
     for player in players:
         for bullet in player.bullets:
@@ -204,6 +211,35 @@ def process_collision():
             continue
         new_bonus_marks.append(bonus_mark)
     bonus_marks = new_bonus_marks
+
+
+def process_post_game_logic():
+    add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT - len(bonus_marks))
+    for player in players:
+        if player.tank is None:
+            continue
+        player.tank.regenerate()
+
+
+def add_new_bonus_marks(count):
+    for i in range(count):
+        bonus_mark = BonusMark()
+        bonus_mark.center_x = random.random() * WORLD_WIDTH
+        bonus_mark.center_y = random.random() * WORLD_HEIGHT
+        can_place = True
+        for j in range(BONUS_MARK_DEFAULT_PLACE_TRIES):
+            for player in players:
+                if player.tank is None:
+                    continue
+                if internal_math.circle_intersection_square(bonus_mark, player.tank) > internal_math.EPS:
+                    can_place = False
+            for bonus_mark_cur in bonus_marks:
+                if internal_math.circle_intersection_square(bonus_mark, bonus_mark_cur) > internal_math.EPS:
+                    can_place = False
+            if can_place:
+                break
+        if can_place:
+            bonus_marks.append(bonus_mark)
 
 
 if __name__ == '__main__':
