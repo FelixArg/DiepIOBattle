@@ -89,16 +89,12 @@ def process_game_logic():
             math.fabs(point[1] - player.tank.center_y) < internal_math.EPS:
         point = [random.random() * WORLD_WIDTH, random.random() * WORLD_HEIGHT]
 
-    vec = (point[0] - player.tank.center_x, point[1] - player.tank.center_y)
-    angle_cur = math.atan2(vec[1], vec[0])
-    if angle_cur < 0:
-        angle_cur += 2 * math.pi
-    if math.fabs(angle_cur - player.tank.angle) < internal_math.EPS:
-        distance = math.sqrt(vec[0] ** 2 + vec[1] ** 2)
-        player.move(distance, tick)
-    else:
+    angle_cur = random.random() * math.pi * 2
+    if math.fabs(angle_cur - player.tank.angle) > internal_math.EPS:
         angle = angle_cur - player.tank.angle
         player.turn(angle, tick)
+
+    player.move(point, tick)
 
     if tick % FPS == 0:
         player.shoot(tick)

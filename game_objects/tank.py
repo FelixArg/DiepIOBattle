@@ -16,10 +16,13 @@ class Tank(CircleBody):
         self.cooldown = TANK_DEFAULT_COOLDOWN
         self.weight = TANK_DEFAULT_WEIGHT
 
-    def move(self, distance):
+    def move(self, to_point):
         distance_can = 1 / FPS * self.speed
+        vector = (to_point[0] - self.center_x, to_point[1] - self.center_y)
+        distance = math.sqrt(vector[0] ** 2 + vector[1] ** 2)
         distance = min(distance, distance_can)
-        vec = (math.cos(self.angle) * distance, math.sin(self.angle) * distance)
+        vector_angle = math.atan2(vector[1], vector[0])
+        vec = (math.cos(vector_angle) * distance, math.sin(vector_angle) * distance)
         self.center_x += vec[0]
         self.center_y += vec[1]
 
@@ -36,10 +39,7 @@ class Tank(CircleBody):
         bullet = Bullet()
         bullet.center_x = self.center_x
         bullet.center_y = self.center_y
-        bullet.radius = 5
         bullet.angle = self.angle
-        bullet.damage = 50
-        bullet.speed = 200
 
         return bullet
 

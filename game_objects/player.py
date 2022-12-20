@@ -13,8 +13,8 @@ class Player:
 
         self.bullets = []
 
-    def move(self, distance, game_tick):
-        self.tank.move(distance)
+    def move(self, to_point, game_tick):
+        self.tank.move(to_point)
 
     def turn(self, angle, game_tick):
         self.tank.turn(angle)
