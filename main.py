@@ -84,6 +84,7 @@ def draw_all(screen):
 def process_game_logic():
     global point
     global player
+    global tick
 
     if math.fabs(point[0] - player.tank.center_x) < internal_math.EPS and \
             math.fabs(point[1] - player.tank.center_y) < internal_math.EPS:
@@ -95,9 +96,7 @@ def process_game_logic():
         player.turn(angle, tick)
 
     player.move(point, tick)
-
-    if tick % FPS == 0:
-        player.shoot(tick)
+    player.shoot(tick)
 
     for bullet in player.bullets:
         bullet.move()

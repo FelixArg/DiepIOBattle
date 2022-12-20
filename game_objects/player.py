@@ -20,4 +20,6 @@ class Player:
         self.tank.turn(angle)
 
     def shoot(self, game_tick):
-        self.bullets.append(self.tank.shoot())
+        bullet = self.tank.shoot(game_tick)
+        if bullet is not None:
+            self.bullets.append(bullet)

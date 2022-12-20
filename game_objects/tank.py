@@ -15,6 +15,7 @@ class Tank(CircleBody):
         self.health_regeneration = TANK_DEFAULT_HEALTH_REGENERATION
         self.cooldown = TANK_DEFAULT_COOLDOWN
         self.weight = TANK_DEFAULT_WEIGHT
+        self.last_time_shoot = None
 
     def move(self, to_point):
         distance_can = 1 / FPS * self.speed
@@ -35,11 +36,16 @@ class Tank(CircleBody):
         if self.center_y >= WORLD_HEIGHT:
             self.center_y = WORLD_HEIGHT - 1
 
-    def shoot(self):
+    def shoot(self, current_game_tick):
+        if self.last_time_shoot is not None and (current_game_tick - self.last_time_shoot) < self.cooldown * FPS:
+            return None
+
         bullet = Bullet()
         bullet.center_x = self.center_x
         bullet.center_y = self.center_y
         bullet.angle = self.angle
+
+        self.last_time_shoot = current_game_tick
 
         return bullet
 
