@@ -3,7 +3,7 @@ import sys
 import pygame
 import argparse
 import random
-import subprocess
+import asyncio
 
 import internal_math
 from game_objects.player import Player
@@ -35,7 +35,7 @@ bonus_marks = []
 #
 
 
-def main():
+async def main():
     global clock
     global tick
 
@@ -49,7 +49,7 @@ def main():
 
     init_game(args.players_program_path)
     while True:
-        process_game_tick(screen)
+        await process_game_tick(screen)
         clock.tick(FPS)
         tick += 1
 
@@ -57,6 +57,9 @@ def main():
 def init_game(players_program):
     global bonus_marks
     global font
+
+    if len(players_program) == 0:
+        players_program = ['HelloWorld.class']
 
     random.seed(0)
 
@@ -71,12 +74,12 @@ def init_game(players_program):
     add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT)
 
 
-def process_game_tick(screen):
+async def process_game_tick(screen):
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-    process_game_logic()
+    await process_game_logic()
     process_collision()
     process_post_game_logic()
     draw_all(screen)
@@ -126,13 +129,28 @@ def draw_all(screen):
     pygame.display.update()
 
 
-def process_game_logic():
+async def run_player_program(player_uid, exec_string):
+    player_info_string = collect_input_for_player(players[player_uid])
+    players_output = None
+    try:
+        proc = await asyncio.create_subprocess_shell(exec_string, stdin=asyncio.subprocess.PIPE,
+                                                     stdout=asyncio.subprocess.PIPE)
+        players_output, err = await asyncio.wait_for(proc.communicate(input=player_info_string.encode('utf-8')),
+                                                     PLAYER_PROGRAM_TIMEOUT)
+        players_output = players_output.decode('utf-8')
+    except asyncio.exceptions.TimeoutError:
+        pass
+    return players_output
+
+
+async def process_game_logic():
     global points
     global players
     global tick
 
+    to_run_parameters = []
+
     for player in players:
-        player_info_string = collect_input_for_player(player)
         exec_string = None
         if player.program_path.endswith('.py'):
             exec_string = 'python3 ' + player.program_path
@@ -141,43 +159,19 @@ def process_game_logic():
         elif player.program_path.endswith('.jar'):
             exec_string = 'java -jar' + player.program_path
         elif player.program_path.endswith('.class'):
-            exec_string = 'java ' + player.program_path[:-6:]
+            last_sep = max(player.program_path.rfind('\\'), player.program_path.rfind('/'))
+            class_name = player.program_path[last_sep + 1:-6:]
+            path_name = player.program_path[:last_sep + 1:]
+            exec_string = 'java ' + path_name + ' ' + class_name
         else:
             exec_string = player.program_path
-        proc = subprocess.Popen([exec_string], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
-        players_output = None
-        try:
-            players_output = proc.communicate(input=player_info_string, timeout=0.100)[0]
-        except subprocess.TimeoutExpired:
-            proc.kill()
-        except:
-            continue
-        parse_player_output(player.uid, players_output)
+        to_run_parameters.append((player.uid, exec_string))
 
-    '''
-    player = players[0]
-    if player.tank is not None:
-        if math.fabs(points[player.uid][0] - player.tank.center_x) < internal_math.EPS and \
-                math.fabs(points[player.uid][1] - player.tank.center_y) < internal_math.EPS:
-            points[player.uid] = [random.random() * WORLD_WIDTH, random.random() * WORLD_HEIGHT]
+    players_output = await asyncio.gather(*(
+        run_player_program(parameter[0], parameter[1]) for parameter in to_run_parameters))
 
-        if len(bonus_marks) > 0:
-            vec = (bonus_marks[0].center_x - player.tank.center_x,
-                   bonus_marks[0].center_y - player.tank.center_y)
-        else:
-            vec = (-player.tank.center_x, -player.tank.center_y)
-        angle_cur = math.atan2(vec[1], vec[0])
-
-        if angle_cur < 0:
-            angle_cur += 2 * math.pi
-        if math.fabs(angle_cur - player.tank.angle) > internal_math.EPS:
-            angle = angle_cur - player.tank.angle
-            player.turn(angle, tick)
-
-        player.move(points[player.uid], tick)
-        player.shoot(tick)
-        player.upgrade(UpgradeType.BULLET_SPEED, tick)
-    '''
+    for i in range(len(to_run_parameters)):
+        parse_player_output(to_run_parameters[i][0], players_output[i])
 
     for player in players:
         for bullet in player.bullets:
@@ -378,4 +372,4 @@ def parse_player_output(player_uid, player_output):
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
