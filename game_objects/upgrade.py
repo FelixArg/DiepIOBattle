@@ -5,6 +5,4 @@ class UpgradeType(Enum):
     MAX_HEALTH = 0
     SPEED = 1
     DAMAGE = 2
-    HEALTH_REGENERATION = 4
-    BULLET_SPEED = 5
-
+    BULLET_SPEED = 4

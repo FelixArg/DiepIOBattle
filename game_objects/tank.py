@@ -84,5 +84,3 @@ class Tank(CircleBody):
             self.bullet_speed_add += UPGRADE_BULLET_SPEED
         elif type == UpgradeType.MAX_HEALTH:
             self.max_health += UPGRADE_MAX_HEALTH
-        elif type == UpgradeType.HEALTH_REGENERATION:
-            self.health_regeneration += UPGRADE_HEALTH_REGENERATION

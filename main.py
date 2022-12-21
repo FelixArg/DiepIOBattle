@@ -58,9 +58,6 @@ def init_game(players_program):
     global bonus_marks
     global font
 
-    if len(players_program) == 0:
-        players_program = ['HelloWorld.class']
-
     random.seed(0)
 
     random.shuffle(players_program)
@@ -187,6 +184,8 @@ def process_collision():
             if bullet.invalidate:
                 continue
             for bonus_mark in bonus_marks:
+                if bullet.invalidate:
+                    break
                 if bonus_mark.invalidate:
                     continue
                 if internal_math.is_circle_intersect(bullet, bonus_mark):
@@ -196,14 +195,20 @@ def process_collision():
                         player.score += bonus_mark.gives_score
                         bonus_mark.invalidate = True
             for player_other in players:
+                if bullet.invalidate:
+                    break
                 if player.uid == player_other.uid:
                     continue
                 for bullet_other in player_other.bullets:
+                    if bullet.invalidate:
+                        break
                     if bullet_other.invalidate:
                         continue
                     if internal_math.is_circle_intersect(bullet, bullet_other):
                         bullet.invalidate = True
                         bullet_other.invalidate = True
+                if bullet.invalidate:
+                    break
                 if player_other.tank is not None and \
                         internal_math.is_circle_intersect(bullet, player_other.tank):
                     bullet.invalidate = True
@@ -284,21 +289,16 @@ def collect_input_for_player(player):
     for bullet in player.bullets:
         info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
 
-    other_player_count = 0
-    for player_cur in players:
-        if player_cur.tank is None or player_cur.uid == player.uid:
-            continue
-        other_player_count += 1
-
+    info_string += str(len(players) - 1) + '\n'
     for player_cur in players:
         if player_cur.uid == player.uid:
             continue
         if player_cur.tank is None:
             info_string += str(0) + '\n'
-            info_string += str(player_cur.score) + '\n'
+            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
         else:
             info_string += str(1) + '\n'
-            info_string += str(player_cur.score) + '\n'
+            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
             info_string += str(player_cur.tank.center_x) + ' ' + str(player_cur.tank.center_y) + ' ' + \
                            str(player_cur.tank.radius) + '\n'
         info_string += str(len(player_cur.bullets)) + '\n'
@@ -355,8 +355,6 @@ def parse_player_output(player_uid, player_output):
                     type = UpgradeType.SPEED
                 elif type == 'damage':
                     type = UpgradeType.DAMAGE
-                elif type == 'health_regeneration':
-                    type = UpgradeType.HEALTH_REGENERATION
                 elif type == 'bullet_speed':
                     type = UpgradeType.BULLET_SPEED
                 players[player_uid].upgrade(type, tick)
