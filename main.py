@@ -1,8 +1,9 @@
 import math
 import sys
 import pygame
-import os
+import argparse
 import random
+import subprocess
 
 import internal_math
 from game_objects.player import Player
@@ -17,6 +18,8 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 VIOLET = (255, 0, 255)
+GREENBLUE = (0, 255, 255)
+ORANGE = (255, 165, 0)
 GRAY = (200, 200, 200)
 #
 
@@ -40,23 +43,31 @@ def main():
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('DiepIO Battle')
 
-    init_game()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('players_program_path', nargs='*')
+    args = parser.parse_args()
+
+    init_game(args.players_program_path)
     while True:
         process_game_tick(screen)
         clock.tick(FPS)
         tick += 1
 
 
-def init_game():
+def init_game(players_program):
     global bonus_marks
     global font
 
+    random.seed(0)
+
+    random.shuffle(players_program)
+
     font = pygame.font.SysFont('Courier new', 20)
 
-    players.append(Player(0))
-    players.append(Player(1))
+    for i in range(len(players_program)):
+        players.append(Player(i))
+        players[i].program_path = players_program[i]
 
-    random.seed(0)
     add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT)
 
 
@@ -89,7 +100,7 @@ def draw_all(screen):
     for player in players:
         if player.tank is None:
             continue
-        pygame.draw.circle(screen, (RED if player.uid == 0 else BLUE),
+        pygame.draw.circle(screen, (RED, BLUE, GREENBLUE, ORANGE)[player.uid],
                            (player.tank.center_x, player.tank.center_y), player.tank.radius)
     #
 
@@ -121,23 +132,41 @@ def process_game_logic():
     global tick
 
     for player in players:
-        if player.tank is None:
+        player_info_string = collect_input_for_player(player)
+        exec_string = None
+        if player.program_path.endswith('.py'):
+            exec_string = 'python3 ' + player.program_path
+        elif player.program_path.endswith('.exe'):
+            exec_string = player.program_path
+        elif player.program_path.endswith('.jar'):
+            exec_string = 'java -jar' + player.program_path
+        elif player.program_path.endswith('.class'):
+            exec_string = 'java ' + player.program_path[:-6:]
+        else:
+            exec_string = player.program_path
+        proc = subprocess.Popen([exec_string], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+        players_output = None
+        try:
+            players_output = proc.communicate(input=player_info_string, timeout=0.100)[0]
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        except:
             continue
+        parse_player_output(player.uid, players_output)
+
+    '''
+    player = players[0]
+    if player.tank is not None:
         if math.fabs(points[player.uid][0] - player.tank.center_x) < internal_math.EPS and \
                 math.fabs(points[player.uid][1] - player.tank.center_y) < internal_math.EPS:
             points[player.uid] = [random.random() * WORLD_WIDTH, random.random() * WORLD_HEIGHT]
 
-        if players[player.uid ^ 1].tank is not None and player.uid == 1:
-            vec = (players[player.uid ^ 1].tank.center_x - player.tank.center_x,
-                   players[player.uid ^ 1].tank.center_y - player.tank.center_y)
-            angle_cur = math.atan2(vec[1], vec[0])
+        if len(bonus_marks) > 0:
+            vec = (bonus_marks[0].center_x - player.tank.center_x,
+                   bonus_marks[0].center_y - player.tank.center_y)
         else:
-            if len(bonus_marks) > 0:
-                vec = (bonus_marks[0].center_x - player.tank.center_x,
-                       bonus_marks[0].center_y - player.tank.center_y)
-            else:
-                vec = (-player.tank.center_x, -player.tank.center_y)
-            angle_cur = math.atan2(vec[1], vec[0])
+            vec = (-player.tank.center_x, -player.tank.center_y)
+        angle_cur = math.atan2(vec[1], vec[0])
 
         if angle_cur < 0:
             angle_cur += 2 * math.pi
@@ -148,6 +177,7 @@ def process_game_logic():
         player.move(points[player.uid], tick)
         player.shoot(tick)
         player.upgrade(UpgradeType.BULLET_SPEED, tick)
+    '''
 
     for player in players:
         for bullet in player.bullets:
@@ -165,7 +195,7 @@ def process_collision():
             for bonus_mark in bonus_marks:
                 if bonus_mark.invalidate:
                     continue
-                if internal_math.circle_intersection_square(bullet, bonus_mark) > internal_math.EPS:
+                if internal_math.is_circle_intersect(bullet, bonus_mark):
                     bonus_mark.health -= bullet.damage
                     bullet.invalidate = True
                     if bonus_mark.health <= 0:
@@ -177,11 +207,11 @@ def process_collision():
                 for bullet_other in player_other.bullets:
                     if bullet_other.invalidate:
                         continue
-                    if internal_math.circle_intersection_square(bullet, bullet_other) > internal_math.EPS:
+                    if internal_math.is_circle_intersect(bullet, bullet_other):
                         bullet.invalidate = True
                         bullet_other.invalidate = True
                 if player_other.tank is not None and \
-                        internal_math.circle_intersection_square(bullet, player_other.tank) > internal_math.EPS:
+                        internal_math.is_circle_intersect(bullet, player_other.tank):
                     bullet.invalidate = True
                     player_other.tank.health -= bullet.damage
                     if player_other.tank.health <= 0:
@@ -233,10 +263,10 @@ def add_new_bonus_marks(count):
             for player in players:
                 if player.tank is None:
                     continue
-                if internal_math.circle_intersection_square(bonus_mark, player.tank) > internal_math.EPS:
+                if internal_math.is_circle_intersect(bonus_mark, player.tank):
                     can_place = False
             for bonus_mark_cur in bonus_marks:
-                if internal_math.circle_intersection_square(bonus_mark, bonus_mark_cur) > internal_math.EPS:
+                if internal_math.is_circle_intersect(bonus_mark, bonus_mark_cur):
                     can_place = False
             if can_place:
                 break
@@ -244,12 +274,11 @@ def add_new_bonus_marks(count):
             bonus_marks.append(bonus_mark)
 
 
-def collect_input_for_player(player, last_mem_string):
+def collect_input_for_player(player):
     if player.tank is None:
         return 'Defeat'
 
     info_string = ''
-    info_string += str(player.uid) + '\n'
     info_string += str(player.score) + '\n'
     info_string += str(player.tank.center_x) + ' ' + str(player.tank.center_y) + ' ' + str(player.tank.radius) + '\n'
     info_string += str(player.tank.health) + ' ' + str(player.tank.max_health) + '\n'
@@ -267,14 +296,17 @@ def collect_input_for_player(player, last_mem_string):
             continue
         other_player_count += 1
 
-    info_string += str(other_player_count) + '\n'
     for player_cur in players:
-        if player_cur.tank is None or player_cur.uid == player.uid:
+        if player_cur.uid == player.uid:
             continue
-        info_string += str(player_cur.uid) + '\n'
-        info_string += str(player_cur.score) + '\n'
-        info_string += str(player_cur.tank.center_x) + ' ' + str(player_cur.tank.center_y) + ' ' + \
-                       str(player_cur.tank.radius) + '\n'
+        if player_cur.tank is None:
+            info_string += str(0) + '\n'
+            info_string += str(player_cur.score) + '\n'
+        else:
+            info_string += str(1) + '\n'
+            info_string += str(player_cur.score) + '\n'
+            info_string += str(player_cur.tank.center_x) + ' ' + str(player_cur.tank.center_y) + ' ' + \
+                           str(player_cur.tank.radius) + '\n'
         info_string += str(len(player_cur.bullets)) + '\n'
         for bullet in player_cur.bullets:
             info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
@@ -283,12 +315,14 @@ def collect_input_for_player(player, last_mem_string):
     for bonus_mark in bonus_marks:
         info_string += str(bonus_mark.center_x) + ' ' + str(bonus_mark.center_y) + ' ' + str(bonus_mark.radius) + '\n'
 
-    info_string += last_mem_string
+    info_string += player.memory_string
     return info_string
 
 
 def parse_player_output(player_uid, player_output):
     global players
+    if player_output is None:
+        return
 
     player_moved = False
     player_shoot = False

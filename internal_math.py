@@ -8,6 +8,13 @@ def circle_square(circle: CircleBody):
     return math.pi * circle.radius * circle.radius
 
 
+def is_circle_intersect(circle_a: CircleBody, circle_b: CircleBody):
+    d = math.sqrt((circle_a.center_x - circle_b.center_x) ** 2 + (circle_a.center_y - circle_b.center_y) ** 2)
+    if d > circle_a.radius + circle_b.radius:
+        return False
+    return True
+
+
 def circle_intersection_square(circle_a: CircleBody, circle_b: CircleBody):
     d = math.sqrt((circle_a.center_x - circle_b.center_x) ** 2 + (circle_a.center_y - circle_b.center_y) ** 2)
     if circle_a.radius + circle_b.radius < d or math.fabs(circle_a.radius + circle_b.radius - d) < EPS:

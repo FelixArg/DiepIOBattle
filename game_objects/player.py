@@ -1,5 +1,6 @@
 from game_objects.tank import *
-from constants import SCORE_NEED_FOR_UPDATE
+from constants import SCORE_NEED_FOR_UPDATE, PLAYER1_SPAWN_X, PLAYER1_SPAWN_Y, PLAYER3_SPAWN_X, PLAYER4_SPAWN_X, \
+    PLAYER3_SPAWN_Y, PLAYER4_SPAWN_Y, PLAYER2_SPAWN_Y, PLAYER2_SPAWN_X
 
 
 class Player:
@@ -8,16 +9,23 @@ class Player:
         self.uid = uid
         self.tank = Tank()
         self.upgrage_count = 0
-        self.memory_string = ''
 
-        #
+        self.color = None
+        self.memory_string = ''
+        self.program_path = None
+
         if uid == 0:
-            self.tank.center_x = 100
-            self.tank.center_y = 100
-        else:
-            self.tank.center_x = 1000
-            self.tank.center_y = 100
-        #
+            self.tank.center_x = PLAYER1_SPAWN_X
+            self.tank.center_y = PLAYER1_SPAWN_Y
+        elif uid == 1:
+            self.tank.center_x = PLAYER2_SPAWN_X
+            self.tank.center_y = PLAYER2_SPAWN_Y
+        elif uid == 2:
+            self.tank.center_x = PLAYER3_SPAWN_X
+            self.tank.center_y = PLAYER3_SPAWN_Y
+        elif uid == 3:
+            self.tank.center_x = PLAYER4_SPAWN_X
+            self.tank.center_y = PLAYER4_SPAWN_Y
 
         self.bullets = []
 
