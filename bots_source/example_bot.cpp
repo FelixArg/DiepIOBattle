@@ -6,6 +6,7 @@ struct Tank{
 	double x = -1;
 	double y = -1;
 	double r = -1;
+	double angle = -1;
 
 	double health = -1;
 	double max_health = -1;
@@ -41,7 +42,7 @@ int main() {
 	int my_score = atoi(s.c_str());
 
 	Tank my_tank;
-	cin >> my_tank.x >> my_tank.y >> my_tank.r;
+	cin >> my_tank.x >> my_tank.y >> my_tank.r >> my_tank.angle;
 	cin >> my_tank.health >> my_tank.max_health;
 	cin >> my_tank.speed;
 	cin >> my_tank.bullet_speed >> my_tank.damage;
@@ -66,7 +67,7 @@ int main() {
 		cin >> enemy_score >> enemy_uid;
 
 		if (is_enemy_alive){
-			cin >> enemy_tank.x >> enemy_tank.y >> enemy_tank.r;
+			cin >> enemy_tank.x >> enemy_tank.y >> enemy_tank.r >> enemy_tank.angle;
 		}
 
 		int enemy_bullets_count;
@@ -87,6 +88,7 @@ int main() {
 	}
 
 	string memory_string;
+	cin.ignore();
 	getline(cin, memory_string);
 
 	int uid_mn = 1e9;
