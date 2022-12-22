@@ -174,7 +174,7 @@ async def process_game_logic():
         elif player.program_path.endswith('.exe'):
             exec_string = player.program_path
         elif player.program_path.endswith('.jar'):
-            exec_string = 'java -jar' + player.program_path
+            exec_string = 'java -jar ' + player.program_path
         elif player.program_path.endswith('.class'):
             last_sep = max(player.program_path.rfind('\\'), player.program_path.rfind('/'))
             class_name = player.program_path[last_sep + 1:-6:]
