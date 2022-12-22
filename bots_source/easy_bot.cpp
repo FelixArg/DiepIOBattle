@@ -5,6 +5,7 @@ mt19937 rng(chrono::high_resolution_clock().now().time_since_epoch().count());
 
 const int world_width = 1500;
 const int world_height = 950;
+const int fps = 40;
 const double eps = 1;
 
 struct Tank{
@@ -31,6 +32,7 @@ struct BonusMark{
 	double x = -1;
 	double y = -1;
 	double r = -1;
+	double health = -1;
 };
 
 vector<string> split(const string& s){
@@ -91,6 +93,7 @@ int main() {
 		cin >> enemy_score >> enemy_uid;
 
 		if (is_enemy_alive){
+			cin >> enemy_tank.health;
 			cin >> enemy_tank.x >> enemy_tank.y >> enemy_tank.r >> enemy_tank.angle;
 		}
 
@@ -108,6 +111,7 @@ int main() {
 
 	vector<BonusMark> bonus_marks(bonus_mark_count);
 	for (auto& bonus_mark : bonus_marks){
+		cin >> bonus_mark.health;
 		cin >> bonus_mark.x >> bonus_mark.y >> bonus_mark.r;
 	}
 
@@ -119,6 +123,8 @@ int main() {
 
 	pair<double, double> move_point = {rng() % world_width, rng() % world_height};
 	pair<int,int> agressive = {rng() % 51 + 30, rng() % 201 + 50};
+	int tick = 0;
+	int start_shoot = rng() % fps;
 
 	if (mem.size() >= 2){
 		double x = atof(mem[0].c_str());
@@ -130,6 +136,8 @@ int main() {
 
 		int speed = atoi(mem[2].c_str());
 		int damage = atoi(mem[3].c_str());
+		tick = atoi(mem[4].c_str());
+		start_shoot = atoi(mem[5].c_str());
 		agressive = {speed, damage};
 	}
 
@@ -178,7 +186,9 @@ int main() {
 
 	cout << "move " << move_point.first << ' ' << move_point.second << '\n';
 	cout << "turn " << d_angle << '\n';
-	cout << "shoot\n";
+	if (tick >= start_shoot){
+		cout << "shoot\n";
+	}
 	if (my_tank.speed < agressive.first){
 		cout << "upgrade speed\n";
 	}
@@ -186,7 +196,7 @@ int main() {
 		cout << "upgrade damage\n";
 	}
 	cout << "memory " << move_point.first << ' ' << move_point.second <<
-	' ' << agressive.first << ' ' << agressive.second << '\n';
+	' ' << agressive.first << ' ' << agressive.second << ' ' << tick + 1 << ' ' << start_shoot << '\n';
 
     return 0;
 }

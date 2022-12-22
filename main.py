@@ -63,6 +63,10 @@ def init_game(players_program):
     global bonus_marks
     global font
 
+    if len(players_program) == 0:
+        players_program = ['/home/felixarg/code/source', '/home/felixarg/code/source',
+                           '/home/felixarg/code/source', '/home/felixarg/code/source']
+
     random.seed(time.time())
 
     random.shuffle(players_program)
@@ -310,16 +314,18 @@ def collect_input_for_player(player):
         return 'Defeat\n'
 
     info_string = ''
-    info_string += str(player.score) + '\n'
-    info_string += str(player.tank.center_x) + ' ' + str(player.tank.center_y) + ' ' + str(player.tank.radius) \
-                   + ' ' + str(player.tank.angle) + '\n'
-    info_string += str(player.tank.health) + ' ' + str(player.tank.max_health) + ' ' + str(player.tank.speed) \
-                   + ' ' + str(player.tank.bullet_speed_add + BULLET_DEFAULT_SPEED) + ' ' \
-                   + str(player.tank.damage_add + BULLET_DEFAULT_DAMAGE) + '\n'
+    info_string += "{:.3f}".format(player.score) + '\n'
+    info_string += "{:.3f}".format(player.tank.center_x) + ' ' + "{:.3f}".format(player.tank.center_y) + ' ' \
+                   + "{:.3f}".format(player.tank.radius) + ' ' + "{:.10f}".format(player.tank.angle) + '\n'
+    info_string += str(int(player.tank.health)) + ' ' + str(int(player.tank.max_health)) + ' ' \
+                   + str(int(player.tank.speed)) + ' ' \
+                   + str(int(player.tank.bullet_speed_add + BULLET_DEFAULT_SPEED)) + ' ' \
+                   + str(int(player.tank.damage_add + BULLET_DEFAULT_DAMAGE)) + '\n'
 
     info_string += str(len(player.bullets)) + '\n'
     for bullet in player.bullets:
-        info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
+        info_string += "{:.3f}".format(bullet.center_x) + ' ' + "{:.3f}".format(bullet.center_y) \
+                       + ' ' + "{:.3f}".format(bullet.radius) + '\n'
 
     info_string += str(len(players) - 1) + '\n'
     for player_cur in players:
@@ -330,16 +336,21 @@ def collect_input_for_player(player):
             info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
         else:
             info_string += str(1) + '\n'
-            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
-            info_string += str(player_cur.tank.center_x) + ' ' + str(player_cur.tank.center_y) + ' ' + \
-                           str(player_cur.tank.radius) + ' ' + str(player_cur.tank.angle) + '\n'
+            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + ' ' + str(player_cur.tank.health) + '\n'
+            info_string += "{:.3f}".format(player_cur.tank.center_x) + ' ' \
+                           + "{:.3f}".format(player_cur.tank.center_y) + ' ' \
+                           + "{:.3f}".format(player_cur.tank.radius) + ' ' \
+                           + "{:.10f}".format(player_cur.tank.angle) + '\n'
         info_string += str(len(player_cur.bullets)) + '\n'
         for bullet in player_cur.bullets:
-            info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
+            info_string += "{:.3f}".format(bullet.center_x) + ' ' + "{:.3f}".format(bullet.center_y) + ' ' \
+                           + "{:.3f}".format(bullet.radius) + '\n'
 
     info_string += str(len(bonus_marks)) + '\n'
     for bonus_mark in bonus_marks:
-        info_string += str(bonus_mark.center_x) + ' ' + str(bonus_mark.center_y) + ' ' + str(bonus_mark.radius) + '\n'
+        info_string += str(bonus_mark.health) + '\n'
+        info_string += "{:.3f}".format(bonus_mark.center_x) + ' ' + "{:.3f}".format(bonus_mark.center_y) + ' ' \
+                       + "{:.3f}".format(bonus_mark.radius) + '\n'
 
     info_string += player.memory_string + '\n'
     return info_string

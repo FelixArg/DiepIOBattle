@@ -26,6 +26,7 @@ struct BonusMark{
 	double x = -1;
 	double y = -1;
 	double r = -1;
+	double health = -1;
 };
 
 int main() {
@@ -67,6 +68,7 @@ int main() {
 		cin >> enemy_score >> enemy_uid;
 
 		if (is_enemy_alive){
+		    cin >> enemy_tank.health;
 			cin >> enemy_tank.x >> enemy_tank.y >> enemy_tank.r >> enemy_tank.angle;
 		}
 
@@ -84,6 +86,7 @@ int main() {
 
 	vector<BonusMark> bonus_marks(bonus_mark_count);
 	for (auto& bonus_mark : bonus_marks){
+	    cin >> bonus_mark.health;
 		cin >> bonus_mark.x >> bonus_mark.y >> bonus_mark.r;
 	}
 
