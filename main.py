@@ -1,17 +1,18 @@
+import argparse
+import asyncio
+import logging
 import math
+import random
 import sys
 import time
 
 import pygame
-import argparse
-import random
-import asyncio
 
 import internal_math
-from game_objects.player import Player
-from game_objects.bonus_mark import BonusMark
-from game_objects.upgrade import UpgradeType
 from constants import *
+from game_objects.bonus_mark import BonusMark
+from game_objects.player import Player
+from game_objects.upgrade import UpgradeType
 
 # colors
 BLACK = (0, 0, 0)
@@ -35,9 +36,7 @@ font = None
 
 players = []
 bonus_marks = []
-
 events = []
-#
 
 
 async def main():
@@ -57,6 +56,7 @@ async def main():
         await process_game_tick(screen)
         clock.tick(FPS)
         tick += 1
+        logging.info("===============================Round " + str(tick) + "=================================")
 
 
 def init_game(players_program):
@@ -123,13 +123,16 @@ def draw_all(screen):
         green_to_red = (255 - int(255 * health_bar_percent), int(255 * health_bar_percent), 0)
         pygame.draw.rect(screen, green_to_red,
                          (player.tank.center_x - player.tank.radius, player.tank.center_y + player.tank.radius + 2 + 50,
-                         health_bar_width, health_bar_heigth), 1, 1)
+                          health_bar_width, health_bar_heigth), 1, 1)
         pygame.draw.rect(screen, green_to_red,
                          (player.tank.center_x - player.tank.radius + (1 - health_bar_percent) * health_bar_width,
                           player.tank.center_y + player.tank.radius + 2 + 50,
-                         health_bar_width * health_bar_percent, health_bar_heigth), border_radius=1)
+                          health_bar_width * health_bar_percent, health_bar_heigth), border_radius=1)
         # end draw healthbar
-    #
+        if player.bullet_power != 0:
+            pygame.draw.circle(screen, VIOLET,
+                               (player.tank.center_x, player.tank.center_y + 50),
+                               BULLET_DEFAULT_RADIUS + player.bullet_power)
 
     pygame.draw.rect(screen, GRAY, (0, 0, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
 
@@ -159,8 +162,8 @@ async def run_player_program(player_uid, exec_string):
         players_output, err = await asyncio.wait_for(proc.communicate(input=player_info_string.encode('utf-8')),
                                                      PLAYER_PROGRAM_TIMEOUT)
         players_output = players_output.decode('utf-8')
-    except asyncio.exceptions.TimeoutError:
-        pass
+    except Exception:
+        logging.error("Timeout program error")
     return players_output
 
 
@@ -172,9 +175,9 @@ async def process_game_logic():
     to_run_parameters = []
 
     for player in players:
-        exec_string = None
+        exec_string = player.program_path
         if player.program_path.endswith('.py'):
-            exec_string = 'python3 ' + player.program_path
+            exec_string = 'python ' + player.program_path
         elif player.program_path.endswith('.exe'):
             exec_string = player.program_path
         elif player.program_path.endswith('.jar'):
@@ -184,8 +187,6 @@ async def process_game_logic():
             class_name = player.program_path[last_sep + 1:-6:]
             path_name = player.program_path[:last_sep + 1:]
             exec_string = 'java ' + path_name + ' ' + class_name
-        else:
-            exec_string = player.program_path
         to_run_parameters.append((player.uid, exec_string))
 
     players_output = await asyncio.gather(*(
@@ -196,7 +197,10 @@ async def process_game_logic():
 
     for player in players:
         for bullet in player.bullets:
-            bullet.move()
+            if bullet.lifetime >= tick:
+                bullet.move()
+            else:
+                bullet.invalidate = True
 
 
 def process_collision():
@@ -263,6 +267,7 @@ def process_collision():
             continue
         if player.tank.invalidate:
             player.tank = None
+        physical_interaction(player, players, bonus_marks)
 
     new_bonus_marks = []
     for bonus_mark in bonus_marks:
@@ -270,6 +275,44 @@ def process_collision():
             continue
         new_bonus_marks.append(bonus_mark)
     bonus_marks = new_bonus_marks
+
+
+def physical_interaction(player, players, bonus_marks):
+    for other_player in players:
+        if other_player.uid != player.uid:
+            if internal_math.is_circle_intersect(player.tank, other_player.tank):
+                vc = (
+                    other_player.tank.center_x - player.tank.center_x,
+                    other_player.tank.center_y - player.tank.center_y)
+
+                try:
+                    u1, _ = internal_math.impulse_calculate(player.tank.radius ** 2, other_player.tank.radius ** 2,
+                                                            player.cur_speed, other_player.cur_speed, vc)
+                    if internal_math.vector_length(u1) > player.tank.speed:
+                        k = internal_math.vector_length(u1) / player.tank.speed
+                        u1[0] = u1[0] / k
+                        u1[1] = u1[1] / k
+                except:
+                    u1 = [0, 0]
+                logging.info("Player " + str(player.uid) + ": Face with player! New speed: " + str(u1))
+                player.add_velocity((2 * u1[0], 2 * u1[1]))
+
+    for bonus_mark in bonus_marks:
+        if internal_math.is_circle_intersect(player.tank, bonus_mark):
+            vc = (
+                bonus_mark.center_x - player.tank.center_x,
+                bonus_mark.center_y - player.tank.center_y)
+            try:
+                u1, _ = internal_math.impulse_calculate(player.tank.radius ** 2, BIG_MASS,
+                                                        player.cur_speed, (0, 0), vc)
+                if internal_math.vector_length(u1) > player.tank.speed:
+                    k = internal_math.vector_length(u1) / player.tank.speed
+                    u1[0] = u1[0] / k
+                    u1[1] = u1[1] / k
+            except:
+                u1 = [0, 0]
+            logging.info("Player " + str(player.uid) + ": Obstacle! New speed: " + str(u1))
+            player.add_velocity((2 * u1[0], 2 * u1[1]))
 
 
 def process_post_game_logic():
@@ -280,7 +323,8 @@ def process_post_game_logic():
         if player.tank is None:
             continue
         player.tank.regenerate()
-
+        logging.info(
+            f"Player {player.uid}. Health: {player.tank.health}, X: {player.tank.center_x}, Y: {player.tank.center_y}, Score: {player.score}, Speed: {player.cur_speed}")
     new_events = []
     for event in events:
         if tick - event[1] < event[2]:
@@ -314,6 +358,7 @@ def collect_input_for_player(player):
         return 'Defeat\n'
 
     info_string = ''
+    info_string += str(tick) + '\n'
     info_string += "{:.3f}".format(player.score) + '\n'
     info_string += "{:.3f}".format(player.tank.center_x) + ' ' + "{:.3f}".format(player.tank.center_y) + ' ' \
                    + "{:.3f}".format(player.tank.radius) + ' ' + "{:.10f}".format(player.tank.angle) + '\n'
@@ -366,7 +411,8 @@ def parse_player_output(player_uid, player_output):
     player_turn = False
     player_memory_string = False
     player_upgrade_count = 0
-
+    logging.info("Player " + str(player_uid) + ":")
+    logging.info(player_output)
     for line in player_output.split('\n'):
         try:
             l = line.split()
@@ -378,6 +424,9 @@ def parse_player_output(player_uid, player_output):
             elif l[0] == 'shoot' and not player_shoot:
                 player_shoot = True
                 players[player_uid].shoot(tick)
+            elif l[0] == 'power' and not player_shoot:
+                player_shoot = True
+                players[player_uid].increase_power(tick)
             elif l[0] == 'turn' and not player_turn:
                 player_turn = True
                 angle = float(l[1])
@@ -421,4 +470,5 @@ def parse_player_output(player_uid, player_output):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(filename="game.log", filemode="w", level=logging.INFO)
     asyncio.run(main())

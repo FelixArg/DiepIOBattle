@@ -20,12 +20,14 @@ class BonusMark:
     x = -1
     y = -1
     r = -1
+    h = -1
 
 
 if __name__ == '__main__':
     s = input()
     if s != "Defeat":
-        my_score = int(s)
+        tick = int(s)
+        my_score = float(input())
 
         my_tank = Tank()
         my_tank.x, my_tank.y, my_tank.r, my_tank.angle = map(float, input().split())
@@ -43,11 +45,12 @@ if __name__ == '__main__':
         enemies = []
         for i in range(enemies_count):
             is_enemy_alive = int(input())
-            enemy_score, enemy_uid = map(int, input().split())
             enemy_tank = Tank()
             if is_enemy_alive == 1:
+                enemy_score, enemy_uid, enemy_health = map(float, input().split())
                 enemy_tank.x, enemy_tank.y, enemy_tank.r, enemy_tank.angle = map(float, input().split())
-
+            else:
+                enemy_score, enemy_uid = map(float, input().split())
             enemy_bullets_count = int(input())
             enemy_bullets = []
 
@@ -62,6 +65,7 @@ if __name__ == '__main__':
         bonus_marks = []
         for i in range(bonus_mark_count):
             bonus_mark = BonusMark()
+            bonus_mark.h = float(input())
             bonus_mark.x, bonus_mark.y, bonus_mark.r = map(float, input().split())
             bonus_marks.append(bonus_mark)
 
@@ -80,5 +84,8 @@ if __name__ == '__main__':
                 move_point = enemy_tank.x, enemy_tank.y
 
         print("move", move_point[0], move_point[1])
-        print("shoot")
+        if tick % 100 > 50:
+            print("shoot")
+        else:
+            print("power")
         print(flush=True)
