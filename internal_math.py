@@ -1,4 +1,5 @@
 import math
+
 from game_objects.circle import CircleBody
 
 EPS = 1e-9
@@ -28,3 +29,35 @@ def circle_intersection_square(circle_a: CircleBody, circle_b: CircleBody):
     s1 = circle_a.radius ** 2 * (f1 - math.sin(f1)) / 2
     s2 = circle_b.radius ** 2 * (f2 - math.sin(f2)) / 2
     return s1 + s2
+
+
+def projection_vector(a, b):
+    return (a[0] * b[0] + a[1] * b[1]) / vector_norm(b)
+
+
+def vector_norm(v):
+    return math.sqrt(v[0] * v[0] + v[1] * v[1])
+
+
+def impulse_calculate(m1, m2, u1, u2, vc):
+    un1 = projection_vector(u1, vc)
+    un2 = projection_vector(u2, vc)
+    ut1 = projection_vector(u1, [-vc[1], vc[0]])
+    ut2 = projection_vector(u2, [-vc[1], vc[0]])
+    a = m2 * m2 + m1 * m2
+    b = -2 * m1 * m2 * un1 - 2 * m2 * m2 * un2
+    c = m2 * m2 * un2 * un2 + 2 * m1 * m2 * un1 * un2 - m2 * m1 * un2 * un2
+    unr1 = quadr_solve(a, b, c)
+    unr2 = (m1 * un1 + m2 * un2 - m1 * unr1) / m2
+    ux1 = projection_vector(ut1, [1, 0]) + projection_vector(unr1, [1, 0])
+    uy1 = projection_vector(ut1, [0, 1]) + projection_vector(unr1, [0, 1])
+    ux2 = projection_vector(ut2, [1, 0]) + projection_vector(unr2, [1, 0])
+    uy2 = projection_vector(ut2, [0, 1]) + projection_vector(unr2, [0, 1])
+    return (ux1, uy1), (ux2, uy2)
+
+
+def quadr_solve(a, b, c):
+    d = b * b - 4 * a * c
+    if d < 0:
+        raise Exception
+    return (-b + math.sqrt(d)) / 2 / a
