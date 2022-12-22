@@ -3,7 +3,6 @@ import asyncio
 import logging
 import math
 import random
-import subprocess
 import sys
 import time
 
@@ -57,6 +56,7 @@ async def main():
         await process_game_tick(screen)
         clock.tick(FPS)
         tick += 1
+        logging.info("===============================Round " + str(tick) + "=================================")
 
 
 def init_game(players_program):
@@ -131,7 +131,7 @@ def draw_all(screen):
         # end draw healthbar
         if player.bullet_power != 0:
             pygame.draw.circle(screen, VIOLET,
-                               (player.tank.center_x, player.tank.center_y),
+                               (player.tank.center_x, player.tank.center_y + 50),
                                BULLET_DEFAULT_RADIUS + player.bullet_power)
 
     pygame.draw.rect(screen, GRAY, (0, 0, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
@@ -267,6 +267,7 @@ def process_collision():
             continue
         if player.tank.invalidate:
             player.tank = None
+        physical_interaction(player, players, bonus_marks)
 
     new_bonus_marks = []
     for bonus_mark in bonus_marks:
@@ -279,22 +280,39 @@ def process_collision():
 def physical_interaction(player, players, bonus_marks):
     for other_player in players:
         if other_player.uid != player.uid:
-            if internal_math.is_circle_intersect(player, other_player):
+            if internal_math.is_circle_intersect(player.tank, other_player.tank):
                 vc = (
-                    player.tank.center_x - other_player.tank.center_x,
-                    player.tank.center_y - other_player.tank.center_y)
-                u1 = internal_math.impulse_calculate(player.tank.radius ** 2, other_player.tank.radius ** 2,
-                                                     player.cur_speed, other_player.cur_speed, vc)
-                player.add_velocity(u1)
+                    other_player.tank.center_x - player.tank.center_x,
+                    other_player.tank.center_y - player.tank.center_y)
+
+                try:
+                    u1, _ = internal_math.impulse_calculate(player.tank.radius ** 2, other_player.tank.radius ** 2,
+                                                            player.cur_speed, other_player.cur_speed, vc)
+                    if internal_math.vector_length(u1) > player.tank.speed:
+                        k = internal_math.vector_length(u1) / player.tank.speed
+                        u1[0] = u1[0] / k
+                        u1[1] = u1[1] / k
+                except:
+                    u1 = [0, 0]
+                logging.info("Player " + str(player.uid) + ": Face with player! New speed: " + str(u1))
+                player.add_velocity((2 * u1[0], 2 * u1[1]))
 
     for bonus_mark in bonus_marks:
-        if internal_math.is_circle_intersect(player, bonus_mark):
+        if internal_math.is_circle_intersect(player.tank, bonus_mark):
             vc = (
-                player.tank.center_x - bonus_mark.center_x,
-                player.tank.center_y - bonus_mark.center_y)
-            u1 = internal_math.impulse_calculate(player.tank.radius ** 2, BIG_MASS,
-                                                 player.cur_speed, (0, 0), vc)
-            player.add_velocity(u1)
+                bonus_mark.center_x - player.tank.center_x,
+                bonus_mark.center_y - player.tank.center_y)
+            try:
+                u1, _ = internal_math.impulse_calculate(player.tank.radius ** 2, BIG_MASS,
+                                                        player.cur_speed, (0, 0), vc)
+                if internal_math.vector_length(u1) > player.tank.speed:
+                    k = internal_math.vector_length(u1) / player.tank.speed
+                    u1[0] = u1[0] / k
+                    u1[1] = u1[1] / k
+            except:
+                u1 = [0, 0]
+            logging.info("Player " + str(player.uid) + ": Obstacle! New speed: " + str(u1))
+            player.add_velocity((2 * u1[0], 2 * u1[1]))
 
 
 def process_post_game_logic():
@@ -305,7 +323,8 @@ def process_post_game_logic():
         if player.tank is None:
             continue
         player.tank.regenerate()
-
+        logging.info(
+            f"Player {player.uid}. Health: {player.tank.health}, X: {player.tank.center_x}, Y: {player.tank.center_y}, Score: {player.score}, Speed: {player.cur_speed}")
     new_events = []
     for event in events:
         if tick - event[1] < event[2]:
@@ -339,6 +358,7 @@ def collect_input_for_player(player):
         return 'Defeat\n'
 
     info_string = ''
+    info_string += str(tick) + '\n'
     info_string += "{:.3f}".format(player.score) + '\n'
     info_string += "{:.3f}".format(player.tank.center_x) + ' ' + "{:.3f}".format(player.tank.center_y) + ' ' \
                    + "{:.3f}".format(player.tank.radius) + ' ' + "{:.10f}".format(player.tank.angle) + '\n'
@@ -391,6 +411,7 @@ def parse_player_output(player_uid, player_output):
     player_turn = False
     player_memory_string = False
     player_upgrade_count = 0
+    logging.info("Player " + str(player_uid) + ":")
     logging.info(player_output)
     for line in player_output.split('\n'):
         try:

@@ -32,14 +32,20 @@ def circle_intersection_square(circle_a: CircleBody, circle_b: CircleBody):
 
 
 def projection_vector(a, b):
-    return (a[0] * b[0] + a[1] * b[1]) / vector_norm(b)
+    return (a[0] * b[0] + a[1] * b[1])
 
 
 def vector_norm(v):
+    norm = math.sqrt(v[0] * v[0] + v[1] * v[1])
+    return v[0] / norm, v[1] / norm
+
+
+def vector_length(v):
     return math.sqrt(v[0] * v[0] + v[1] * v[1])
 
 
 def impulse_calculate(m1, m2, u1, u2, vc):
+    vc = vector_norm(vc)
     un1 = projection_vector(u1, vc)
     un2 = projection_vector(u2, vc)
     ut1 = projection_vector(u1, [-vc[1], vc[0]])
@@ -47,13 +53,11 @@ def impulse_calculate(m1, m2, u1, u2, vc):
     a = m2 * m2 + m1 * m2
     b = -2 * m1 * m2 * un1 - 2 * m2 * m2 * un2
     c = m2 * m2 * un2 * un2 + 2 * m1 * m2 * un1 * un2 - m2 * m1 * un2 * un2
-    unr1 = quadr_solve(a, b, c)
-    unr2 = (m1 * un1 + m2 * un2 - m1 * unr1) / m2
-    ux1 = projection_vector(ut1, [1, 0]) + projection_vector(unr1, [1, 0])
-    uy1 = projection_vector(ut1, [0, 1]) + projection_vector(unr1, [0, 1])
-    ux2 = projection_vector(ut2, [1, 0]) + projection_vector(unr2, [1, 0])
-    uy2 = projection_vector(ut2, [0, 1]) + projection_vector(unr2, [0, 1])
-    return (ux1, uy1), (ux2, uy2)
+    unr2 = quadr_solve(a, b, c)
+    unr1 = (m1 * un1 + m2 * un2 - m2 * unr2) / m1
+    ur1 = unr1 * vc[0] - ut1 * vc[1], unr1 * vc[1] + ut1 * vc[0]
+    ur2 = unr2 * vc[0] - ut2 * vc[1], unr2 * vc[1] + ut2 * vc[0]
+    return ur1, ur2
 
 
 def quadr_solve(a, b, c):

@@ -2,7 +2,7 @@ from constants import WORLD_WIDTH, WORLD_HEIGHT, FPS, ANGLE_SPEED, \
     TANK_DEFAULT_SPEED, TANK_DEFAULT_RADIUS, TANK_DEFAULT_WEIGHT, TANK_DEFAULT_ANGLE, \
     TANK_DEFAULT_HEALTH, TANK_DEFAULT_HEALTH_REGENERATION, TANK_DEFAULT_COOLDOWN, \
     TANK_DEFAULT_DAMAGE_ADD, TANK_DEFAULT_BULLET_SPEED_ADD, UPGRADE_SPEED, UPGRADE_DAMAGE, \
-    UPGRADE_BULLET_SPEED, UPGRADE_MAX_HEALTH, UPGRADE_HEALTH_REGENERATION
+    UPGRADE_BULLET_SPEED, UPGRADE_MAX_HEALTH
 from game_objects.bullet import Bullet
 from game_objects.upgrade import UpgradeType
 from internal_math import *
@@ -26,11 +26,12 @@ class Tank(CircleBody):
 
     def _correct_last_speed(self):
         vec = self.last_speed
-        if vec[0] != 0 and vec[1] != 0:
+        if abs(vec[0]) + abs(vec[1]) > 1e-6:
             vector_angle = math.atan2(vec[1], vec[0])
             last_module = math.sqrt(vec[0] ** 2 + vec[1] ** 2)
-            vec_neutral = (math.cos(vector_angle) * self.speed, math.sin(vector_angle) * self.speed)
-            if last_module > self.speed:
+            real_speed = 1 / FPS * self.speed
+            if last_module > real_speed:
+                vec_neutral = (math.cos(vector_angle) * real_speed, math.sin(vector_angle) * real_speed)
                 self.last_speed[0] -= vec_neutral[0]
                 self.last_speed[1] -= vec_neutral[1]
             else:
@@ -38,14 +39,14 @@ class Tank(CircleBody):
 
     def move(self, to_point):
         distance_can = 1 / FPS * self.speed
-        # self._correct_last_speed()
-        # vec = self.last_speed
-        # if vec[0] == 0 or vec[1] == 0:
-        vector = (to_point[0] - self.center_x, to_point[1] - self.center_y)
-        distance = math.sqrt(vector[0] ** 2 + vector[1] ** 2)
-        distance = min(distance, distance_can)
-        vector_angle = math.atan2(vector[1], vector[0])
-        vec = (math.cos(vector_angle) * distance, math.sin(vector_angle) * distance)
+        self._correct_last_speed()
+        vec = self.last_speed
+        if abs(vec[0]) + abs(vec[1]) < 1e-6:
+            vector = (to_point[0] - self.center_x, to_point[1] - self.center_y)
+            distance = math.sqrt(vector[0] ** 2 + vector[1] ** 2)
+            distance = min(distance, distance_can)
+            vector_angle = math.atan2(vector[1], vector[0])
+            vec = (math.cos(vector_angle) * distance, math.sin(vector_angle) * distance)
         self.center_x += vec[0]
         self.center_y += vec[1]
 
@@ -58,7 +59,7 @@ class Tank(CircleBody):
         if self.center_y >= WORLD_HEIGHT:
             self.center_y = WORLD_HEIGHT - 1
 
-        return vec[0],vec[1]
+        return vec[0], vec[1]
 
     def can_shoot(self, current_game_tick):
         if self.last_time_shoot is not None and (current_game_tick - self.last_time_shoot) < self.cooldown * FPS:
