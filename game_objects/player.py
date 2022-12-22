@@ -42,6 +42,7 @@ class Player:
 
     def upgrade(self, type: UpgradeType, game_tick):
         if self.upgrage_count >= self.score // SCORE_NEED_FOR_UPDATE:
-            return
+            return False
         self.upgrage_count += 1
         self.tank.upgrade(type)
+        return True

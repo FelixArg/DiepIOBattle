@@ -1,5 +1,7 @@
 import math
 import sys
+import time
+
 import pygame
 import argparse
 import random
@@ -20,7 +22,10 @@ BLUE = (0, 0, 255)
 VIOLET = (255, 0, 255)
 GREENBLUE = (0, 255, 255)
 ORANGE = (255, 165, 0)
-GRAY = (200, 200, 200)
+GRAY = (150, 150, 150)
+
+RUSSIAN_COLORS = ['Красный', 'Синий', 'Голубой', 'Оранжевый']
+RUSSIAN_COLORS_GENITIVE = ['Красного', 'Синего', 'Голубого', 'Оранжевого']
 #
 
 # game globals
@@ -28,10 +33,10 @@ tick = 0
 clock = pygame.time.Clock()
 font = None
 
-points = [[1000, 700], [1000, 700]]
-
 players = []
 bonus_marks = []
+
+events = []
 #
 
 
@@ -58,15 +63,18 @@ def init_game(players_program):
     global bonus_marks
     global font
 
-    random.seed(0)
+    random.seed(time.time())
 
     random.shuffle(players_program)
 
-    font = pygame.font.SysFont('Courier new', 20)
+    font = pygame.font.SysFont('Courier new', 20, bold=True)
+
+    colors = (RED, BLUE, GREENBLUE, ORANGE)
 
     for i in range(len(players_program)):
         players.append(Player(i))
         players[i].program_path = players_program[i]
+        players[i].color = colors[i]
 
     add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT)
 
@@ -86,42 +94,54 @@ def draw_all(screen):
     global players
     global bonus_marks
     global font
+    global events
 
     screen.fill(WHITE)
 
     # Game objects
     for player in players:
         for bullet in player.bullets:
-            pygame.draw.circle(screen, VIOLET, (bullet.center_x, bullet.center_y), bullet.radius)
+            pygame.draw.circle(screen, VIOLET, (bullet.center_x, bullet.center_y + 50), bullet.radius)
 
     for bonus_mark in bonus_marks:
-        pygame.draw.circle(screen, GREEN, (bonus_mark.center_x, bonus_mark.center_y), bonus_mark.radius)
+        pygame.draw.circle(screen, GREEN, (bonus_mark.center_x, bonus_mark.center_y + 50), bonus_mark.radius)
 
     for player in players:
         if player.tank is None:
             continue
-        pygame.draw.circle(screen, (RED, BLUE, GREENBLUE, ORANGE)[player.uid],
-                           (player.tank.center_x, player.tank.center_y), player.tank.radius)
+        pygame.draw.circle(screen, player.color,
+                           (player.tank.center_x, player.tank.center_y + 50), player.tank.radius)
+
+        # draw healthbar
+        health_bar_width = player.tank.radius * 2
+        health_bar_heigth = player.tank.radius * 2 / 5
+        health_bar_percent = player.tank.health / player.tank.max_health
+        green_to_red = (255 - int(255 * health_bar_percent), int(255 * health_bar_percent), 0)
+        pygame.draw.rect(screen, green_to_red,
+                         (player.tank.center_x - player.tank.radius, player.tank.center_y + player.tank.radius + 2 + 50,
+                         health_bar_width, health_bar_heigth), 1, 1)
+        pygame.draw.rect(screen, green_to_red,
+                         (player.tank.center_x - player.tank.radius + (1 - health_bar_percent) * health_bar_width,
+                          player.tank.center_y + player.tank.radius + 2 + 50,
+                         health_bar_width * health_bar_percent, health_bar_heigth), border_radius=1)
+        # end draw healthbar
     #
 
-    pygame.draw.rect(screen, GRAY, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
-    pygame.draw.rect(screen, BLACK, (0, WORLD_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT), 3)
+    pygame.draw.rect(screen, GRAY, (0, 0, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
 
-    player_1_info_str = 'Player 1 [' + 'Score: ' + str(players[0].score) + ' ' + 'Health: ' + \
-                        str(0 if players[0].tank is None else math.trunc(players[0].tank.health)) + ' ' + 'Speed: ' \
-                        + str(0 if players[0].tank is None else players[0].tank.speed) + ' ' + 'Damage: ' \
-                        + str(0 if players[0].tank is None else players[0].tank.damage_add + BULLET_DEFAULT_DAMAGE) \
-                        + ']'
-    player_1_score_img = font.render(player_1_info_str, True, RED)
-    screen.blit(player_1_score_img, (15, WORLD_HEIGHT + 15))
+    margin = 15
 
-    player_2_info_str = 'Player 2 [' + 'Score: ' + str(players[1].score) + ' ' + 'Health: ' + \
-                        str(0 if players[1].tank is None else math.trunc(players[1].tank.health)) + ' ' + 'Speed: ' \
-                        + str(0 if players[1].tank is None else players[1].tank.speed) + ' ' + 'Damage: ' \
-                        + str(0 if players[1].tank is None else players[1].tank.damage_add + BULLET_DEFAULT_DAMAGE) \
-                        + ']'
-    player_2_score_img = font.render(player_2_info_str, True, BLUE)
-    screen.blit(player_2_score_img, (WORLD_WIDTH - 15 - player_2_score_img.get_width(), WORLD_HEIGHT + 15))
+    for player in players:
+        player_info_str = 'Player ' + str(player.uid + 1) + ' Score: ' + str(player.score)
+        player_score_img = font.render(player_info_str, True, player.color)
+        screen.blit(player_score_img, (margin, 15))
+        margin += player_score_img.get_width() + 50
+
+    for idx, event in enumerate(events):
+        player_score_img = font.render(event[0], True, BLACK)
+        time_left = (tick - event[1]) / event[2]
+        player_score_img.set_alpha(255 - int(255 * time_left))
+        screen.blit(player_score_img, (margin, 15 + event[3] * (tick - event[1])))
 
     pygame.display.update()
 
@@ -178,6 +198,7 @@ async def process_game_logic():
 def process_collision():
     global players
     global bonus_marks
+    global events
 
     for player in players:
         for bullet in player.bullets:
@@ -214,6 +235,9 @@ def process_collision():
                     bullet.invalidate = True
                     player_other.tank.health -= bullet.damage
                     if player_other.tank.health <= 0:
+                        events.append((RUSSIAN_COLORS[player.uid] + ' расщепил на атомы '
+                                       + RUSSIAN_COLORS_GENITIVE[player_other.uid],
+                                       tick, 3 * DEFAULT_EVENT_LIFE * FPS, len(events)))
                         player_other.tank.invalidate = True
 
     for player in players:
@@ -245,11 +269,19 @@ def process_collision():
 
 
 def process_post_game_logic():
+    global events
+
     add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT - len(bonus_marks))
     for player in players:
         if player.tank is None:
             continue
         player.tank.regenerate()
+
+    new_events = []
+    for event in events:
+        if tick - event[1] < event[2]:
+            new_events.append(event)
+    events = new_events
 
 
 def add_new_bonus_marks(count):
@@ -275,15 +307,15 @@ def add_new_bonus_marks(count):
 
 def collect_input_for_player(player):
     if player.tank is None:
-        return 'Defeat'
+        return 'Defeat\n'
 
     info_string = ''
     info_string += str(player.score) + '\n'
-    info_string += str(player.tank.center_x) + ' ' + str(player.tank.center_y) + ' ' + str(player.tank.radius) + '\n'
-    info_string += str(player.tank.health) + ' ' + str(player.tank.max_health) + '\n'
-    info_string += str(player.tank.speed) + '\n'
-    info_string += str(player.tank.bullet_speed_add + BULLET_DEFAULT_SPEED) + ' ' + \
-                   str(player.tank.damage_add + BULLET_DEFAULT_DAMAGE) + '\n'
+    info_string += str(player.tank.center_x) + ' ' + str(player.tank.center_y) + ' ' + str(player.tank.radius) \
+                   + ' ' + str(player.tank.angle) + '\n'
+    info_string += str(player.tank.health) + ' ' + str(player.tank.max_health) + ' ' + str(player.tank.speed) \
+                   + ' ' + str(player.tank.bullet_speed_add + BULLET_DEFAULT_SPEED) + ' ' \
+                   + str(player.tank.damage_add + BULLET_DEFAULT_DAMAGE) + '\n'
 
     info_string += str(len(player.bullets)) + '\n'
     for bullet in player.bullets:
@@ -300,7 +332,7 @@ def collect_input_for_player(player):
             info_string += str(1) + '\n'
             info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
             info_string += str(player_cur.tank.center_x) + ' ' + str(player_cur.tank.center_y) + ' ' + \
-                           str(player_cur.tank.radius) + '\n'
+                           str(player_cur.tank.radius) + ' ' + str(player_cur.tank.angle) + '\n'
         info_string += str(len(player_cur.bullets)) + '\n'
         for bullet in player_cur.bullets:
             info_string += str(bullet.center_x) + ' ' + str(bullet.center_y) + ' ' + str(bullet.radius) + '\n'
@@ -309,7 +341,7 @@ def collect_input_for_player(player):
     for bonus_mark in bonus_marks:
         info_string += str(bonus_mark.center_x) + ' ' + str(bonus_mark.center_y) + ' ' + str(bonus_mark.radius) + '\n'
 
-    info_string += player.memory_string
+    info_string += player.memory_string + '\n'
     return info_string
 
 
@@ -342,22 +374,30 @@ def parse_player_output(player_uid, player_output):
                     raise Exception
                 if angle < -2 * math.pi:
                     raise Exception
-                players[player_uid].turn(angle)
+                players[player_uid].turn(angle, tick)
             elif l[0] == 'upgrade' and player_upgrade_count < MAX_UPGRADE_COUNT_PER_TICK:
                 player_upgrade_count += 1
                 type = l[1]
                 valid_types = ['max_health', 'speed', 'damage', 'health_regeneration', 'bullet_speed']
+                event_string = ''
                 if type not in valid_types:
                     raise Exception
                 if type == 'max_health':
                     type = UpgradeType.MAX_HEALTH
+                    event_string = 'максимальное здоровье'
                 elif type == 'speed':
                     type = UpgradeType.SPEED
+                    event_string = 'скорость'
                 elif type == 'damage':
                     type = UpgradeType.DAMAGE
+                    event_string = 'урон'
                 elif type == 'bullet_speed':
                     type = UpgradeType.BULLET_SPEED
-                players[player_uid].upgrade(type, tick)
+                    event_string = 'скорость снаряда'
+                success = players[player_uid].upgrade(type, tick)
+                if success:
+                    events.append((RUSSIAN_COLORS[player_uid] + ' улучшил ' + event_string,
+                                   tick, DEFAULT_EVENT_LIFE * FPS, len(events)))
             elif l[0] == 'memory' and not player_memory_string:
                 player_memory_string = True
                 players[player_uid].memory_string = line[7::]
