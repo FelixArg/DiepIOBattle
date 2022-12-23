@@ -113,8 +113,8 @@ def draw_all(screen):
             continue
         canon_points = [[player.tank.radius / 4, player.tank.radius / 8],
                         [player.tank.radius / 4, -player.tank.radius / 8],
-                        [3 * player.tank.radius / 2, -3 * player.tank.radius / 16],
-                        [3 * player.tank.radius / 2, 3 * player.tank.radius / 16]]
+                        [3 * player.tank.radius / 2, -(3 * player.tank.radius / 16 + player.bullet_power * player.tank.radius / 16)],
+                        [3 * player.tank.radius / 2, (3 * player.tank.radius / 16 + player.bullet_power * player.tank.radius / 16)]]
         new_canon_points = []
         for x, y in canon_points:
             new_x = x * math.cos(player.tank.angle) - y * math.sin(player.tank.angle)
