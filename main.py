@@ -25,11 +25,13 @@ GREENBLUE = (0, 255, 255)
 ORANGE = (255, 165, 0)
 GRAY = (150, 150, 150)
 
-RUSSIAN_COLORS = ['Красный', 'Синий', 'Голубой', 'Оранжевый']
-RUSSIAN_COLORS_GENITIVE = ['Красного', 'Синего', 'Голубого', 'Оранжевого']
+RUSSIAN_COLORS = ['Красный', 'Синий', 'Салатовый', 'Оранжевый']
+RUSSIAN_COLORS_GENITIVE = ['Красного', 'Синего', 'Салатового', 'Оранжевого']
 #
 
 # game globals
+end_game = INFINITY * FPS
+win = []
 tick = 0
 clock = pygame.time.Clock()
 font = None
@@ -42,6 +44,7 @@ events = []
 async def main():
     global clock
     global tick
+    global end_game
 
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -49,9 +52,13 @@ async def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('players_program_path', nargs='*')
+    parser.add_argument('--time', type=int, help= 'Play for {time} seconds')
     args = parser.parse_args()
 
     init_game(args.players_program_path)
+    if args.time is not None:
+        end_game = args.time * FPS
+
     while True:
         await process_game_tick(screen)
         clock.tick(FPS)
@@ -63,13 +70,9 @@ def init_game(players_program):
     global bonus_marks
     global font
 
-    if len(players_program) == 0:
-        players_program = ['/home/felixarg/code/source', '/home/felixarg/code/source',
-                           '/home/felixarg/code/source', '/home/felixarg/code/source']
-
     random.seed(time.time())
 
-    font = pygame.font.SysFont('Courier new', 20, bold=True)
+    font = pygame.font.SysFont('Courier new', 18, bold=True)
 
     colors = (RED, BLUE, GREENBLUE, ORANGE)
 
@@ -86,9 +89,10 @@ async def process_game_tick(screen):
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-    await process_game_logic()
-    process_collision()
-    process_post_game_logic()
+    if len(win) == 0:
+        await process_game_logic()
+        process_collision()
+        process_post_game_logic()
     draw_all(screen)
 
 
@@ -148,19 +152,35 @@ def draw_all(screen):
 
     pygame.draw.rect(screen, GRAY, (0, 0, WINDOW_WIDTH, WINDOW_HEIGHT - WORLD_HEIGHT))
 
-    margin = 15
+    margin = 17
 
     for player in players:
         player_info_str = 'Player ' + str(player.uid + 1) + ' Score: ' + str(player.score)
         player_score_img = font.render(player_info_str, True, player.color)
-        screen.blit(player_score_img, (margin, 15))
-        margin += player_score_img.get_width() + 50
+        screen.blit(player_score_img, (margin, 17))
+        margin += player_score_img.get_width() + 17
+
+    tick_img = font.render('Тик: ' + str(min(end_game, tick)), True, BLACK)
+    screen.blit(tick_img, (margin, 17))
+    margin += tick_img.get_width() + 17
 
     for idx, event in enumerate(events):
         player_score_img = font.render(event[0], True, BLACK)
         time_left = (tick - event[1]) / event[2]
         player_score_img.set_alpha(255 - int(255 * time_left))
-        screen.blit(player_score_img, (margin, 15 + event[3] * (tick - event[1])))
+        screen.blit(player_score_img, (margin, 17 + event[3] * (tick - event[1])))
+
+    if len(win) != 0:
+        font2 = pygame.font.SysFont('Courier new', 40, bold=True)
+        winners = ''
+        if len(win) == 1:
+            winners = 'Абсолютный чемпион ' + RUSSIAN_COLORS[win[0]] + '!'
+        else:
+            winners = 'Разделили первое место ' + ', '.join([RUSSIAN_COLORS[uid] for uid in win]) + '.'
+
+        winners_img = font2.render(winners, True, BLACK)
+        screen.blit(winners_img, (WORLD_WIDTH / 2 - winners_img.get_width() / 2,
+                                  WORLD_HEIGHT / 2 - winners_img.get_height() / 2 + 50))
 
     pygame.display.update()
 
@@ -333,6 +353,8 @@ def physical_interaction(player, players, bonus_marks):
 
 def process_post_game_logic():
     global events
+    global win
+    global end_game
 
     add_new_bonus_marks(BONUS_MARK_DEFAULT_COUNT - len(bonus_marks))
     for player in players:
@@ -346,6 +368,34 @@ def process_post_game_logic():
         if tick - event[1] < event[2]:
             new_events.append(event)
     events = new_events
+
+    player_alive_count = 0
+    for player in players:
+        if player.tank is not None:
+            player_alive_count += 1
+
+    if player_alive_count == 0:
+        max_score = max((player.score for player in players))
+        for player in players:
+            if player.score == max_score:
+                win.append(player.uid)
+        end_game = tick
+    elif player_alive_count == 1:
+        max_score = max((player.score for player in players))
+        count = 0
+        for player in players:
+            if player.score == max_score:
+                count += 1
+        if count == 1:
+            for player in players:
+                if player.tank is not None and player.score == max_score:
+                    win.append(player.uid)
+        end_game = tick
+    elif tick == end_game:
+        max_score = max((player.score for player in players))
+        for player in players:
+            if player.score == max_score:
+                win.append(player.uid)
 
 
 def add_new_bonus_marks(count):
