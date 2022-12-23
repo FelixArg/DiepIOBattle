@@ -50,9 +50,12 @@ async def main():
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
     pygame.display.set_caption('DiepIO Battle')
 
+    icon = pygame.image.load('assets/icon.png')
+    pygame.display.set_icon(icon)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('players_program_path', nargs='*')
-    parser.add_argument('--time', type=int, help= 'Play for {time} seconds')
+    parser.add_argument('--time', type=int, help='Play for {time} seconds')
     args = parser.parse_args()
 
     init_game(args.players_program_path)
@@ -421,7 +424,7 @@ def add_new_bonus_marks(count):
 
 def collect_input_for_player(player):
     if player.tank is None:
-        return 'Defeat\n'
+        return 'Dead\n'
 
     info_string = ''
     info_string += str(tick) + '\n'
