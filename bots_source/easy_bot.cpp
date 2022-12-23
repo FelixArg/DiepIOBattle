@@ -4,7 +4,7 @@ using namespace std;
 mt19937 rng(chrono::high_resolution_clock().now().time_since_epoch().count());
 
 const int world_width = 1500;
-const int world_height = 950;
+const int world_height = 650;
 const int fps = 40;
 const double eps = 1;
 
@@ -65,7 +65,11 @@ int main() {
 		return 0;
 	}
 
-	int my_score = atoi(s.c_str());
+	int tick = atoi(s.c_str());
+
+
+	int my_score;
+	cin >> my_score;
 
 	Tank my_tank;
 	cin >> my_tank.x >> my_tank.y >> my_tank.r >> my_tank.angle;
@@ -123,7 +127,6 @@ int main() {
 
 	pair<double, double> move_point = {rng() % world_width, rng() % world_height};
 	pair<int,int> agressive = {rng() % 51 + 30, rng() % 201 + 50};
-	int tick = 0;
 	int start_shoot = rng() % fps;
 
 	if (mem.size() >= 2){
@@ -136,8 +139,7 @@ int main() {
 
 		int speed = atoi(mem[2].c_str());
 		int damage = atoi(mem[3].c_str());
-		tick = atoi(mem[4].c_str());
-		start_shoot = atoi(mem[5].c_str());
+		start_shoot = atoi(mem[4].c_str());
 		agressive = {speed, damage};
 	}
 
@@ -196,7 +198,7 @@ int main() {
 		cout << "upgrade damage\n";
 	}
 	cout << "memory " << move_point.first << ' ' << move_point.second <<
-	' ' << agressive.first << ' ' << agressive.second << ' ' << tick + 1 << ' ' << start_shoot << '\n';
+	' ' << agressive.first << ' ' << agressive.second << ' ' << start_shoot << '\n';
 
     return 0;
 }

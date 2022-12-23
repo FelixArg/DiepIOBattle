@@ -69,8 +69,6 @@ def init_game(players_program):
 
     random.seed(time.time())
 
-    random.shuffle(players_program)
-
     font = pygame.font.SysFont('Courier new', 20, bold=True)
 
     colors = (RED, BLUE, GREENBLUE, ORANGE)
@@ -113,6 +111,19 @@ def draw_all(screen):
     for player in players:
         if player.tank is None:
             continue
+        canon_points = [[player.tank.radius / 4, player.tank.radius / 8],
+                        [player.tank.radius / 4, -player.tank.radius / 8],
+                        [3 * player.tank.radius / 2, -3 * player.tank.radius / 16],
+                        [3 * player.tank.radius / 2, 3 * player.tank.radius / 16]]
+        new_canon_points = []
+        for x, y in canon_points:
+            new_x = x * math.cos(player.tank.angle) - y * math.sin(player.tank.angle)
+            new_y = y * math.cos(player.tank.angle) + x * math.sin(player.tank.angle)
+            new_canon_points.append([new_x + player.tank.center_x, new_y + player.tank.center_y + 50])
+        canon_points = new_canon_points
+
+        pygame.draw.polygon(screen, GRAY, canon_points)
+        pygame.draw.aalines(screen, GRAY, True, canon_points)
         pygame.draw.circle(screen, player.color,
                            (player.tank.center_x, player.tank.center_y + 50), player.tank.radius)
 
@@ -129,6 +140,7 @@ def draw_all(screen):
                           player.tank.center_y + player.tank.radius + 2 + 50,
                           health_bar_width * health_bar_percent, health_bar_heigth), border_radius=1)
         # end draw healthbar
+
         if player.bullet_power != 0:
             pygame.draw.circle(screen, VIOLET,
                                (player.tank.center_x, player.tank.center_y + 50),
@@ -278,7 +290,11 @@ def process_collision():
 
 
 def physical_interaction(player, players, bonus_marks):
+    if player.tank is None:
+        return
     for other_player in players:
+        if other_player.tank is None:
+            continue
         if other_player.uid != player.uid:
             if internal_math.is_circle_intersect(player.tank, other_player.tank):
                 vc = (
@@ -359,7 +375,7 @@ def collect_input_for_player(player):
 
     info_string = ''
     info_string += str(tick) + '\n'
-    info_string += "{:.3f}".format(player.score) + '\n'
+    info_string += str(player.score) + '\n'
     info_string += "{:.3f}".format(player.tank.center_x) + ' ' + "{:.3f}".format(player.tank.center_y) + ' ' \
                    + "{:.3f}".format(player.tank.radius) + ' ' + "{:.10f}".format(player.tank.angle) + '\n'
     info_string += str(int(player.tank.health)) + ' ' + str(int(player.tank.max_health)) + ' ' \

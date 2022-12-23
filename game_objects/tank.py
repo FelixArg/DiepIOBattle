@@ -71,8 +71,8 @@ class Tank(CircleBody):
             return None
 
         bullet = Bullet(current_game_tick)
-        bullet.center_x = self.center_x
-        bullet.center_y = self.center_y
+        bullet.center_x = self.center_x + math.cos(self.angle) * self.radius
+        bullet.center_y = self.center_y + math.sin(self.angle) * self.radius
         bullet.angle = self.angle
         bullet.damage += self.damage_add
         bullet.speed += self.bullet_speed_add
