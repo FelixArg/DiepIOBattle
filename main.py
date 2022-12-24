@@ -450,7 +450,7 @@ def collect_input_for_player(player):
             info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
         else:
             info_string += str(1) + '\n'
-            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + ' ' + str(player_cur.tank.health) + '\n'
+            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + ' ' + str(int(player_cur.tank.health)) + '\n'
             info_string += "{:.3f}".format(player_cur.tank.center_x) + ' ' \
                            + "{:.3f}".format(player_cur.tank.center_y) + ' ' \
                            + "{:.3f}".format(player_cur.tank.radius) + ' ' \
@@ -462,7 +462,7 @@ def collect_input_for_player(player):
 
     info_string += str(len(bonus_marks)) + '\n'
     for bonus_mark in bonus_marks:
-        info_string += str(bonus_mark.health) + '\n'
+        info_string += str(int(bonus_mark.health)) + '\n'
         info_string += "{:.3f}".format(bonus_mark.center_x) + ' ' + "{:.3f}".format(bonus_mark.center_y) + ' ' \
                        + "{:.3f}".format(bonus_mark.radius) + '\n'
 
