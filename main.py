@@ -39,12 +39,13 @@ font = None
 players = []
 bonus_marks = []
 events = []
-
+player_log = False
 
 async def main():
     global clock
     global tick
     global end_game
+    global player_log
 
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -56,11 +57,15 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('players_program_path', nargs='*')
     parser.add_argument('--time', type=int, help='Play for {time} seconds')
+    parser.add_argument('--log', type=bool, help='Collect input for Player 0')
     args = parser.parse_args()
 
     init_game(args.players_program_path)
     if args.time is not None:
         end_game = args.time * FPS
+
+    if args.log is not None:
+        player_log = args.log
 
     while True:
         await process_game_tick(screen)
@@ -453,7 +458,8 @@ def collect_input_for_player(player):
             info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + '\n'
         else:
             info_string += str(1) + '\n'
-            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + ' ' + str(int(player_cur.tank.health)) + '\n'
+            info_string += str(player_cur.score) + ' ' + str(player_cur.uid) + ' ' + str(
+                int(player_cur.tank.health)) + '\n'
             info_string += "{:.3f}".format(player_cur.tank.center_x) + ' ' \
                            + "{:.3f}".format(player_cur.tank.center_y) + ' ' \
                            + "{:.3f}".format(player_cur.tank.radius) + ' ' \
@@ -470,6 +476,8 @@ def collect_input_for_player(player):
                        + "{:.3f}".format(bonus_mark.radius) + '\n'
 
     info_string += player.memory_string + '\n'
+    if player.uid == 0 and player_log:
+        logging.info(info_string)
     return info_string
 
 
