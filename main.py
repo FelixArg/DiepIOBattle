@@ -120,8 +120,10 @@ def draw_all(screen):
             continue
         canon_points = [[player.tank.radius / 4, player.tank.radius / 8],
                         [player.tank.radius / 4, -player.tank.radius / 8],
-                        [3 * player.tank.radius / 2, -(3 * player.tank.radius / 16 + player.bullet_power * player.tank.radius / 16)],
-                        [3 * player.tank.radius / 2, (3 * player.tank.radius / 16 + player.bullet_power * player.tank.radius / 16)]]
+                        [3 * player.tank.radius / 2,
+                         -(3 * player.tank.radius / 16 + player.bullet_power * player.tank.radius / 16)],
+                        [3 * player.tank.radius / 2,
+                         (3 * player.tank.radius / 16 + player.bullet_power * player.tank.radius / 16)]]
         new_canon_points = []
         for x, y in canon_points:
             new_x = x * math.cos(player.tank.angle) - y * math.sin(player.tank.angle)
@@ -327,8 +329,9 @@ def physical_interaction(player, players, bonus_marks):
                 try:
                     u1, _ = internal_math.impulse_calculate(player.tank.radius ** 2, other_player.tank.radius ** 2,
                                                             player.cur_speed, other_player.cur_speed, vc)
-                    if internal_math.vector_length(u1) > player.tank.speed:
-                        k = internal_math.vector_length(u1) / player.tank.speed
+                    real_speed = 1 / FPS * player.tank.speed * 40
+                    if internal_math.vector_length(u1) > real_speed:
+                        k = internal_math.vector_length(u1) / real_speed
                         u1[0] = u1[0] / k
                         u1[1] = u1[1] / k
                 except:
@@ -344,14 +347,14 @@ def physical_interaction(player, players, bonus_marks):
             try:
                 u1, _ = internal_math.impulse_calculate(player.tank.radius ** 2, BIG_MASS,
                                                         player.cur_speed, (0, 0), vc)
-                if internal_math.vector_length(u1) > player.tank.speed:
-                    k = internal_math.vector_length(u1) / player.tank.speed
-                    u1[0] = u1[0] / k
-                    u1[1] = u1[1] / k
+                real_speed = 1 / FPS * player.tank.speed
+                if internal_math.vector_length(u1) < real_speed:
+                    u1[0] = 2 * u1[0]
+                    u1[1] = 2 * u1[1]
             except:
                 u1 = [0, 0]
             logging.info("Player " + str(player.uid) + ": Obstacle! New speed: " + str(u1))
-            player.add_velocity((2 * u1[0], 2 * u1[1]))
+            player.add_velocity((u1[0], u1[1]))
 
 
 def process_post_game_logic():

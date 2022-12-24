@@ -55,8 +55,8 @@ def impulse_calculate(m1, m2, u1, u2, vc):
     c = m2 * m2 * un2 * un2 + 2 * m1 * m2 * un1 * un2 - m2 * m1 * un2 * un2
     unr2 = quadr_solve(a, b, c)
     unr1 = (m1 * un1 + m2 * un2 - m2 * unr2) / m1
-    ur1 = unr1 * vc[0] - ut1 * vc[1], unr1 * vc[1] + ut1 * vc[0]
-    ur2 = unr2 * vc[0] - ut2 * vc[1], unr2 * vc[1] + ut2 * vc[0]
+    ur1 = [unr1 * vc[0] - ut1 * vc[1], unr1 * vc[1] + ut1 * vc[0]]
+    ur2 = [unr2 * vc[0] - ut2 * vc[1], unr2 * vc[1] + ut2 * vc[0]]
     return ur1, ur2
 
 
